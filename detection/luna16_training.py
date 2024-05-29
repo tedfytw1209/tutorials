@@ -263,6 +263,7 @@ def main():
         # Training
         for batch_data in train_loader:
             step += 1
+            #flatten targets per image and images per batch
             inputs = [
                 batch_data_ii["image"].to(device) for batch_data_i in batch_data for batch_data_ii in batch_data_i
             ]
