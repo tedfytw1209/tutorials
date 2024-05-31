@@ -192,6 +192,7 @@ class OBJDetectInference():
         self.amp = amp
         self.use_train = debug_dict.get('use_train',True)
         self.use_test = debug_dict.get('use_test',True)
+        self.model_name = config_dict.get('model_name',"")
 
     def __call__(self, *args: Any, **kwargs: Any):
         """
