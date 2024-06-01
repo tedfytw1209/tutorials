@@ -294,7 +294,7 @@ class OBJDetectInference():
             net.load_state_dict(pre_net, strict=False)
 
         # 1-4. build detector
-        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.args.verbose).to(device)
+        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
         # set training components
         detector.set_atss_matcher(num_candidates=4, center_in_gt=False)
         detector.set_hard_negative_sampler(
