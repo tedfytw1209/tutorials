@@ -88,6 +88,7 @@ class OBJDetectInference():
         for k, v in config_dict.items():
             setattr(class_args, k, v)
         # 1. define transform
+        ### !!!maybe different transform
         intensity_transform = ScaleIntensityRanged(
             keys=["image"],
             a_min=-1024,
@@ -107,7 +108,6 @@ class OBJDetectInference():
             affine_lps_to_ras=True,
             amp=amp,
         )
-
         val_transforms = generate_detection_val_transform(
             "image",
             "box",
@@ -128,8 +128,18 @@ class OBJDetectInference():
             amp=amp,
         )
         # 2. prepare training data
-        # create a training data loader
-        ### !!! why batch_szie=1?
+        self.make_datasets(class_args,train_transforms,val_transforms,inference_transforms)
+
+        #store to self
+        self.env_dict, self.config_dict = env_dict, config_dict
+        self.args = class_args
+        self.verbose = verbose
+        self.amp = amp
+        self.use_train = debug_dict.get('use_train',True)
+        self.use_test = debug_dict.get('use_test',True)
+        self.model_name = config_dict.get('model_name',"")
+    
+    def make_datasets(self,class_args,train_transforms,val_transforms,inference_transforms):
         train_data = load_decathlon_datalist(
             class_args.data_list_file_path,
             is_segmentation=True,
@@ -182,17 +192,8 @@ class OBJDetectInference():
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
         )
-
-        #store to self
         self.train_ds, self.val_ds, self.inference_ds = train_ds, val_ds, inference_ds
         self.train_loader, self.val_loader, self.inference_loader = train_loader, val_loader, inference_loader
-        self.env_dict, self.config_dict = env_dict, config_dict
-        self.args = class_args
-        self.verbose = verbose
-        self.amp = amp
-        self.use_train = debug_dict.get('use_train',True)
-        self.use_test = debug_dict.get('use_test',True)
-        self.model_name = config_dict.get('model_name',"")
 
     def __call__(self, *args: Any, **kwargs: Any):
         """
@@ -227,10 +228,13 @@ class OBJDetectInference():
         # returned_layers: when target boxes are small, set it smaller
         # base_anchor_shapes: anchor shape for the most high-resolution output,
         #   when target boxes are small, set it smaller
-        anchor_generator = AnchorGeneratorWithAnchorShape(
-            feature_map_scales=[2**l for l in range(len(self.args.returned_layers) + 1)],
-            base_anchor_shapes=self.args.base_anchor_shapes,
-        )
+        if self.model_name=='retinanet':
+            anchor_generator = AnchorGeneratorWithAnchorShape(
+                feature_map_scales=[2**l for l in range(len(self.args.returned_layers) + 1)],
+                base_anchor_shapes=self.args.base_anchor_shapes,
+            )
+        else:
+            anchor_generator = None
 
         coco_metric = COCOMetric(classes=["nodule"], iou_list=[0.1], max_detection=[100])
         train_results, test_results, compute_results = {},{},{}
@@ -245,7 +249,7 @@ class OBJDetectInference():
         compute_results['infer_train'] = train_results
         compute_results['infer_test'] = test_results
         return compute_results
-
+    #3. train
     def train(self, anchor_generator, metric, device, pre_net=None):
         """
         Training with the `network` pretrained-model (or not).
@@ -261,79 +265,17 @@ class OBJDetectInference():
             dict: dictionary with values for evaluation (include metric in train and test)
         """
         # 1-2. build network & load pre-train network
-        #tmp code
-        conv1_t_size = [max(7, 2 * s + 1) for s in self.args.conv1_t_stride]
-        backbone = resnet.ResNet(
-            block=resnet.ResNetBottleneck,
-            layers=[3, 4, 6, 3],
-            block_inplanes=resnet.get_inplanes(),
-            n_input_channels=self.args.n_input_channels,
-            conv1_t_stride=self.args.conv1_t_stride,
-            conv1_t_size=conv1_t_size,
-        )
-        feature_extractor = resnet_fpn_feature_extractor(
-            backbone=backbone,
-            spatial_dims=self.args.spatial_dims,
-            pretrained_backbone=False,
-            trainable_backbone_layers=None,
-            returned_layers=self.args.returned_layers,
-        )
-        num_anchors = anchor_generator.num_anchors_per_location()[0]
-        size_divisible = [s * 2 * 2 ** max(self.args.returned_layers) for s in feature_extractor.body.conv1.stride]
-        net = torch.jit.script(
-            RetinaNet(
-                spatial_dims=self.args.spatial_dims,
-                num_classes=len(self.args.fg_labels),
-                num_anchors=num_anchors,
-                feature_extractor=feature_extractor,
-                size_divisible=size_divisible,
-            )
-        )
+        net = self.build_net(anchor_generator)
         #1-3. load pre-train network !!!
         if pre_net!=None:
             net.load_state_dict(pre_net, strict=False)
 
         # 1-4. build detector
-        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
-        # set training components
-        detector.set_atss_matcher(num_candidates=4, center_in_gt=False)
-        detector.set_hard_negative_sampler(
-            batch_size_per_image=64,
-            positive_fraction=self.args.balanced_sampler_pos_fraction,
-            pool_size=20,
-            min_neg=16,
-        )
-        detector.set_target_keys(box_key="box", label_key="label")
-        # set validation components
-        detector.set_box_selector_parameters(
-            score_thresh=self.args.score_thresh,
-            topk_candidates_per_level=1000,
-            nms_thresh=self.args.nms_thresh,
-            detections_per_img=100,
-        )
-        detector.set_sliding_window_inferer(
-            roi_size=self.args.val_patch_size,
-            overlap=0.25,
-            sw_batch_size=1,
-            mode="constant",
-            device="cpu",
-        )
+        detector = self.build_detector(net,anchor_generator,device,train=True,valid=True)
 
         # 2. Initialize training
-        # initlize optimizer
-        optimizer = torch.optim.SGD(
-            detector.network.parameters(),
-            self.args.lr,
-            momentum=0.9,
-            weight_decay=3e-5,
-            nesterov=True,
-        )
-        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1)
-        scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=10, after_scheduler=after_scheduler)
-        scaler = torch.cuda.amp.GradScaler() if self.amp else None
-        optimizer.zero_grad()
-        optimizer.step()
-
+        # initlize optimizer, !!!need different version for different setting
+        optimizer, scheduler, scaler = self.train_setting(detector)
         # initialize tensorboard writer
         tensorboard_writer = SummaryWriter(self.args.tfevent_path)
         val_interval = self.config_dict.get('val_interval', 5)  # do validation every val_interval epochs
@@ -354,7 +296,7 @@ class OBJDetectInference():
             epoch_box_reg_loss = 0
             step = 0
             start_time = time.time()
-            scheduler_warmup.step()
+            scheduler.step()
             # Training
             for batch_data in self.train_loader:
                 step += 1
@@ -495,7 +437,7 @@ class OBJDetectInference():
 
         print(f"train completed, best_metric: {best_val_epoch_metric:.4f} " f"at epoch: {best_val_epoch}")
         tensorboard_writer.close()
-
+    
     #4. Test
     def test(self, anchor_generator, metric, device,net=None):
         # 2) build test network
@@ -505,23 +447,8 @@ class OBJDetectInference():
         else:
             print(f"Use model from function args")
 
-        # 3) build detector (!!!change to validation like detector)
-        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=False)
-        detector.set_target_keys(box_key="box", label_key="label")
-        # set validation components
-        detector.set_box_selector_parameters(
-            score_thresh=self.args.score_thresh,
-            topk_candidates_per_level=1000,
-            nms_thresh=self.args.nms_thresh,
-            detections_per_img=100,
-        )
-        detector.set_sliding_window_inferer(
-            roi_size=self.args.val_patch_size,
-            overlap=0.25,
-            sw_batch_size=1,
-            mode="constant",
-            device="cpu",
-        )
+        # 3) build detector (!!!changed to validation like detector)
+        detector = self.build_detector(net,anchor_generator,device,train=False,valid=True)
 
         ###!!! need change to our evaluation metric
         # 4. apply trained model
@@ -576,7 +503,106 @@ class OBJDetectInference():
 
         with open(self.args.result_list_file_path, "w") as outfile:
             json.dump(test_metric_dict, outfile, indent=4)
+    #build Network
+    def build_net(self,*args: Any, **kwargs: Any):
+        if self.model_name=='retinanet':
+            return self.build_retinanet(*args, **kwargs)
+        elif self.model_name=='vitdet': #!!! need implement
+            return None
+        else:
+            pass ###!!! need raise error
+    
+    def build_retinanet(self,anchor_generator):
+        #tmp code
+        conv1_t_size = [max(7, 2 * s + 1) for s in self.args.conv1_t_stride]
+        backbone = resnet.ResNet(
+            block=resnet.ResNetBottleneck,
+            layers=[3, 4, 6, 3],
+            block_inplanes=resnet.get_inplanes(),
+            n_input_channels=self.args.n_input_channels,
+            conv1_t_stride=self.args.conv1_t_stride,
+            conv1_t_size=conv1_t_size,
+        )
+        feature_extractor = resnet_fpn_feature_extractor(
+            backbone=backbone,
+            spatial_dims=self.args.spatial_dims,
+            pretrained_backbone=False,
+            trainable_backbone_layers=None,
+            returned_layers=self.args.returned_layers,
+        )
+        num_anchors = anchor_generator.num_anchors_per_location()[0]
+        size_divisible = [s * 2 * 2 ** max(self.args.returned_layers) for s in feature_extractor.body.conv1.stride]
+        net = torch.jit.script(
+            RetinaNet(
+                spatial_dims=self.args.spatial_dims,
+                num_classes=len(self.args.fg_labels),
+                num_anchors=num_anchors,
+                feature_extractor=feature_extractor,
+                size_divisible=size_divisible,
+            )
+        )
+        return net
+    
+    #build detector
+    def build_detector(self,net,anchor_generator,device,train=True,valid=True):
+        if self.model_name=='retinanet':
+            detector = self.build_retinanet_detector(net, anchor_generator, device, train, valid)
+        elif self.model_name=='vitdet':
+            detector = None #!!! need implement
+        return detector
+    
+    #retinanet
+    def build_retinanet_detector(self,net,anchor_generator,device,train=True,valid=True):
+        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
+        # set training components
+        if train:
+            detector.set_atss_matcher(num_candidates=4, center_in_gt=False)
+            detector.set_hard_negative_sampler(
+                batch_size_per_image=64,
+                positive_fraction=self.args.balanced_sampler_pos_fraction,
+                pool_size=20,
+                min_neg=16,
+            )
+            detector.set_target_keys(box_key="box", label_key="label")
+        # set validation components
+        if valid:
+            detector.set_box_selector_parameters(
+                score_thresh=self.args.score_thresh,
+                topk_candidates_per_level=1000,
+                nms_thresh=self.args.nms_thresh,
+                detections_per_img=100,
+            )
+            detector.set_sliding_window_inferer(
+                roi_size=self.args.val_patch_size,
+                overlap=0.25,
+                sw_batch_size=1,
+                mode="constant",
+                device="cpu",
+            )
+            detector.set_target_keys(box_key="box", label_key="label")
+        return detector
 
+    #training settings
+    def train_setting(self,detector):
+        if self.model_name=='retinanet':
+            optimizer = torch.optim.SGD(
+                detector.network.parameters(),
+                self.args.lr,
+                momentum=0.9,
+                weight_decay=3e-5,
+                nesterov=True,
+            )
+            after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1)
+            scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=10, after_scheduler=after_scheduler)
+            scaler = torch.cuda.amp.GradScaler() if self.amp else None
+            scheduler = scheduler_warmup
+            optimizer.zero_grad()
+            optimizer.step()
+        elif self.model_name=='vitdet':
+            pass #!!! need implement
+        
+        return optimizer, scheduler, scaler
+    
 def load_model(path=None):
     if path:  # make sure to load pretrained model
         if '.ckpt' in args.model_path:
