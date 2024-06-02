@@ -505,8 +505,10 @@ class OBJDetectInference():
         else:
             print(f"Use model from function args")
 
-        # 3) build detector
+        # 3) build detector (!!!change to validation like detector)
         detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=False)
+        detector.set_target_keys(box_key="box", label_key="label")
+        # set validation components
         detector.set_box_selector_parameters(
             score_thresh=self.args.score_thresh,
             topk_candidates_per_level=1000,
@@ -517,7 +519,7 @@ class OBJDetectInference():
             roi_size=self.args.val_patch_size,
             overlap=0.25,
             sw_batch_size=1,
-            mode="gaussian",
+            mode="constant",
             device="cpu",
         )
 
