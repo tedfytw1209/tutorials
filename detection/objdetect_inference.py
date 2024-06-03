@@ -45,9 +45,11 @@ from monai.apps.detection.networks.retinanet_network import (
 from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape
 from monai.data import DataLoader, Dataset, box_utils, load_decathlon_datalist
 from monai.data.utils import no_collation
-from monai.networks.nets import resnet
+from monai.networks.nets import resnet, ViT
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
+
+from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool
 
 class OBJDetectInference():
     """
@@ -154,7 +156,7 @@ class OBJDetectInference():
             train_ds,
             batch_size=1,
             shuffle=True,
-            num_workers=7,
+            num_workers=4,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
             persistent_workers=True,
@@ -508,10 +510,10 @@ class OBJDetectInference():
         if self.model_name=='retinanet':
             return self.build_retinanet(*args, **kwargs)
         elif self.model_name=='vitdet': #!!! need implement
-            return None
+            return self.build_vitdet(*args, **kwargs)
         else:
             pass ###!!! need raise error
-    
+    #retina net
     def build_retinanet(self,anchor_generator):
         #tmp code
         conv1_t_size = [max(7, 2 * s + 1) for s in self.args.conv1_t_stride]
@@ -541,6 +543,45 @@ class OBJDetectInference():
                 size_divisible=size_divisible,
             )
         )
+        return net
+    #vitdet
+    def build_vitdet(self,*args, **kwargs):
+        # Base
+        embed_dim, depth, num_heads, dp = 768, 12, 12, 0.1
+        # 2conv in RPN:
+        head_conv_dims = [-1, -1]
+        # 4conv1fc box head
+        box_head_conv_dims = [256, 256, 256, 256]
+        box_head_fc_dims = [1024]
+
+        net = SimpleFeaturePyramid(
+            net=ViT(
+                in_channels=3, #input channel
+                img_size=1024,
+                patch_size=16,
+                hidden_size=embed_dim,
+                num_layers=depth,
+                num_heads=num_heads,
+                #drop_path_rate=dp not impl, it is not equal to dropout
+                #window_size=14 not impl
+                mlp_dim=embed_dim*4,
+                qkv_bias=True,
+                #act_layer=nn.GELU
+                #norm_layer eps need to change from 1e-5 to 1e-6
+                #window_block_indexes not impl
+                #residual_block_indexes not used
+                #use_rel_pos=True not impl
+                #pretrain_img_size=224, ?
+                #pretrain_use_cls_token=True, ?
+                #out_feature="last_feat", is name of the last feature, no need
+                ),
+            in_feature="${.net.out_feature}",
+            out_channels=256,
+            scale_factors=(4.0, 2.0, 1.0, 0.5),
+            top_block=LastLevelMaxPool,
+            square_pad=1024,
+            )
+        
         return net
     
     #build detector
