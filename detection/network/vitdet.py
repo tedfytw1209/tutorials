@@ -15,23 +15,45 @@ from collections.abc import Sequence
 
 import math
 import torch
-import torch.nn as nn
+from torch import Tensor, nn
+import torch.nn.functional as F
 
 from timm.models.layers import DropPath
 
 from monai.networks.blocks.patchembedding import PatchEmbeddingBlock
 from monai.networks.blocks.mlp import MLPBlock
-from monai.utils import deprecated_arg
-from monai.networks.nets import ViT
 from monai.utils import optional_import
+from monai.networks.blocks.backbone_fpn_utils import BackboneWithFPN
+from monai.networks.layers.factories import Conv, Pool
+
+from dataclasses import dataclass
+from typing import Optional
 
 Rearrange, _ = optional_import("einops.layers.torch", name="Rearrange")
+_validate_trainable_layers, _ = optional_import(
+    "torchvision.models.detection.backbone_utils", name="_validate_trainable_layers"
+)
+torchvision_models, _ = optional_import("torchvision.models")
 
 """
 This module implements SimpleFeaturePyramid in :paper:`vitdet`.
 Code come from https://github.com/facebookresearch/detectron2.git implement
 It creates pyramid features built on top of the input feature map.
 """
+
+@dataclass
+class ShapeSpec:
+    """
+    A simple structure that contains basic shape specification about a tensor.
+    It is often used as the auxiliary inputs/outputs of models,
+    to complement the lack of shape inference ability among pytorch modules.
+    """
+
+    channels: Optional[int] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    stride: Optional[int] = None
+
 def window_partition(x, window_size):
     """
     Partition into non-overlapping windows with padding if needed.
@@ -76,6 +98,38 @@ def window_unpartition(windows, window_size, pad_hw, hw):
     if Hp > H or Wp > W:
         x = x[:, :H, :W, :].contiguous()
     return x
+
+def get_rel_pos(q_size, k_size, rel_pos):
+    """
+    Get relative positional embeddings according to the relative positions of
+        query and key sizes.
+    Args:
+        q_size (int): size of query q.
+        k_size (int): size of key k.
+        rel_pos (Tensor): relative position embeddings (L, C).
+
+    Returns:
+        Extracted positional embeddings according to relative positions.
+    """
+    max_rel_dist = int(2 * max(q_size, k_size) - 1)
+    # Interpolate rel pos if needed.
+    if rel_pos.shape[0] != max_rel_dist:
+        # Interpolate rel pos.
+        rel_pos_resized = F.interpolate(
+            rel_pos.reshape(1, rel_pos.shape[0], -1).permute(0, 2, 1),
+            size=max_rel_dist,
+            mode="linear",
+        )
+        rel_pos_resized = rel_pos_resized.reshape(-1, max_rel_dist).permute(1, 0)
+    else:
+        rel_pos_resized = rel_pos
+
+    # Scale the coords with short length if shapes for q and k are different.
+    q_coords = torch.arange(q_size)[:, None] * max(k_size / q_size, 1.0)
+    k_coords = torch.arange(k_size)[None, :] * max(q_size / k_size, 1.0)
+    relative_coords = (q_coords - k_coords) + (k_size - 1) * max(q_size / k_size, 1.0)
+
+    return rel_pos_resized[relative_coords.long()]
 
 def add_decomposed_rel_pos(attn, q, rel_pos_h, rel_pos_w, q_size, k_size):
     """
@@ -286,6 +340,7 @@ class ViTDet(nn.Module): ###!!! Not checked
         use_rel_pos: bool = False,
         rel_pos_zero_init=True,
         pretrain_img_size: int = 224,
+        out_feature="last_feat",
         ):
         """
         Args:
@@ -312,6 +367,7 @@ class ViTDet(nn.Module): ###!!! Not checked
             window_block_indexes (list): Indexes for blocks using window attention.
             use_rel_pos (bool): If True, add relative positional embeddings to the attention map.
             pretrain_img_size (int): input image size for pretraining models.
+            out_feature (str): name of the feature from the last block.
         """
 
         super().__init__()
@@ -324,8 +380,13 @@ class ViTDet(nn.Module): ###!!! Not checked
         
         # stochastic depth decay rule
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, num_layers)]
-        self._out_channels = hidden_size
-        self._out_strides = patch_size
+        self._out_feature_channels = {out_feature: hidden_size}
+        self._out_feature_strides = {out_feature: patch_size}
+        self._out_features = [out_feature]
+        if isinstance(patch_size,int):
+            patch_size_hw = patch_size
+        else:
+            patch_size_hw = patch_size[0]
 
         self.classification = classification
         #!!! need check position encoding code
@@ -347,7 +408,7 @@ class ViTDet(nn.Module): ###!!! Not checked
                                 window_size=window_size if i in window_block_indexes else 0,
                                 use_rel_pos=use_rel_pos,
                                 rel_pos_zero_init=rel_pos_zero_init,
-                                input_size=(img_size // patch_size, img_size // patch_size),
+                                input_size=(img_size // patch_size_hw, img_size // patch_size_hw),
                                 )
                 for i in range(num_layers)
             ]
@@ -373,13 +434,22 @@ class ViTDet(nn.Module): ###!!! Not checked
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
         #!!! need check shape
-        #!!! x.permute(0, 3, 1, 2) in vitdet
-        return x, hidden_states_out
+        #!!! x.permute(0, 3, 1, 2)=back to (N,C,H,W) in vitdet
+        return {self._out_features[0]:x}, hidden_states_out
+    
+    def output_shape(self):
+        """
+        Returns:
+            dict[str->ShapeSpec]
+        """
+        # this is a backward-compatible default
+        return {
+            name: ShapeSpec(
+                channels=self._out_feature_channels[name], stride=self._out_feature_strides[name]
+            )
+            for name in self._out_features
+        }
         
-        
-        
-
-
 class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
     """
     ViTDet, based on: "Yanghao Li et al.,
@@ -389,7 +459,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
     """
     def __init__(
         self,
-        net,
+        input_shapes,
         in_feature,
         out_channels,
         scale_factors,
@@ -398,8 +468,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
     ):
         """
         Args:
-            net (nn.Module): module representing the subnetwork backbone.
-                Must be a subclass of :class:`nn.Module`.
+            input_shapes: input_shapes of the net (net.output_shape()).
             in_feature (str): names of the input feature maps coming
                 from the net.
             out_channels (int): number of channels in the output feature maps.
@@ -415,11 +484,9 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             square_pad (int): If > 0, require input images to be padded to specific square size.
         """
         super(SimpleFeaturePyramid, self).__init__()
-        assert isinstance(net, nn.Module)
 
         self.scale_factors = scale_factors
 
-        input_shapes = net.output_shape()
         strides = [int(input_shapes[in_feature].stride / scale) for scale in scale_factors]
         #_assert_strides_are_log2_contiguous(strides)
 
@@ -468,44 +535,42 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             layers = nn.Sequential(*layers)
 
             stage = int(math.log2(strides[idx]))
-            self.add_module(f"simfp_{stage}", layers)
+            self.add_module(f"simfp_{stage}", layers) #torch func
             self.stages.append(layers)
 
-        self.net = net
+        #self.net = net
         self.in_feature = in_feature
         self.top_block = top_block
         # Return feature names are "p<stage>", like ["p2", "p3", ..., "p6"]
-        self._out_feature_strides = {"p{}".format(int(math.log2(s))): s for s in strides}
+        self._out_feature_strides = {"feat{}".format(int(math.log2(s))): s for s in strides}
         # top block output feature maps.
         if self.top_block is not None:
             for s in range(stage, stage + self.top_block.num_levels):
-                self._out_feature_strides["p{}".format(s + 1)] = 2 ** (s + 1)
+                self._out_feature_strides["feat{}".format(s + 1)] = 2 ** (s + 1)
 
         self._out_features = list(self._out_feature_strides.keys())
         self._out_feature_channels = {k: out_channels for k in self._out_features}
         self._size_divisibility = strides[-1]
         self._square_pad = square_pad
-    '''
     @property
     def padding_constraints(self):
         return {
             "size_divisiblity": self._size_divisibility,
             "square_size": self._square_pad,
         }
-    '''
     def forward(self, x):
         """
         Args:
-            x: Tensor of shape (N,C,H,W). H, W must be a multiple of ``self.size_divisibility``.
-
+            x: Output of vitdet model
         Returns:
             dict[str->Tensor]:
                 mapping from feature map name to pyramid feature map tensor
                 in high to low resolution order. Returned feature names follow the FPN
                 convention: "p<stage>", where stage has stride = 2 ** stage e.g.,
-                ["p2", "p3", ..., "p6"].
+                ["feat2", "feat3", ..., "feat6"].
         """
-        bottom_up_features = self.net(x)
+        #bottom_up_features = self.net(x)
+        bottom_up_features = x
         features = bottom_up_features[self.in_feature]
         results = []
 
@@ -527,10 +592,158 @@ class LastLevelMaxPool(nn.Module):
     P6 feature from P5.
     """
 
-    def __init__(self):
+    def __init__(self, spatial_dims: int = 2):
         super().__init__()
         self.num_levels = 1
-        self.in_feature = "p5"
+        self.in_feature = "feat5"
+        pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[Pool.MAX, spatial_dims]
+        self.maxpool = pool_type(kernel_size=1, stride=2, padding=0)
 
     def forward(self, x):
-        return [F.max_pool2d(x, kernel_size=1, stride=2, padding=0)]
+        return self.maxpool(x)
+
+class BackboneWithFPN_vitdet(nn.Module):
+    """
+    Adds an FPN on top of a model. ViTdet version
+    Internally, it uses torchvision.models._utils.IntermediateLayerGetter to
+    extract a submodel that returns the feature maps specified in return_layers.
+    The same limitations of IntermediateLayerGetter apply here.
+
+    Args:
+        backbone: backbone network
+        fpn: fpn module used
+        return_layers: [not used] a dict containing the names
+            of the modules for which the activations will be returned as
+            the key of the dict, and the value of the dict is the name
+            of the returned activation (which the user can specify).
+        in_channels_list: [not used] number of channels for each feature map
+            that is returned, in the order they are present in the OrderedDict
+        out_channels: number of channels in the FPN.
+        spatial_dims: 2D or 3D images
+    """
+
+    def __init__(
+        self,
+        backbone: nn.Module,
+        fpn: nn.Module,
+        return_layers: dict[str, str],
+        in_channels_list: list[int],
+        out_channels: int,
+        spatial_dims: int | None = None,
+    ) -> None:
+        super().__init__()
+
+        # if spatial_dims is not specified, try to find it from backbone.
+        if spatial_dims is None:
+            if hasattr(backbone, "spatial_dims") and isinstance(backbone.spatial_dims, int):
+                spatial_dims = backbone.spatial_dims
+            elif isinstance(backbone.conv1, nn.Conv2d):
+                spatial_dims = 2
+            elif isinstance(backbone.conv1, nn.Conv3d):
+                spatial_dims = 3
+            else:
+                raise ValueError("Could not find spatial_dims of backbone, please specify it.")
+
+        #self.body = torchvision_models._utils.IntermediateLayerGetter(backbone, return_layers=return_layers) #!!! not understand
+        self.body = backbone
+        self.fpn = fpn
+        self.out_channels = out_channels
+
+    def forward(self, x: Tensor) -> dict[str, Tensor]:
+        """
+        Computes the resulted feature maps of the network.
+
+        Args:
+            x: input images
+
+        Returns:
+            feature maps after FPN layers. They are ordered from highest resolution first.
+        """
+        x, hidden_states = self.body(x)  # backbone
+        y: dict[str, Tensor] = self.fpn(x)  # FPN
+        return y
+
+#!!! need change
+def _vit_fpn_extractor(
+    backbone: nn.Module,
+    fpn: nn.Module,
+    spatial_dims: int,
+    trainable_layers: int = 5, #! not used now
+    returned_layers: list[int] | None = None,
+) -> BackboneWithFPN_vitdet:
+    """
+    Same code as https://github.com/pytorch/vision/blob/release/0.12/torchvision/models/detection/backbone_utils.py
+    Except that ``in_channels_stage2 = backbone.in_planes // 8`` instead of ``in_channels_stage2 = backbone.inplanes // 8``,
+    and it requires spatial_dims: 2D or 3D images.
+    """
+
+    # select layers that wont be frozen
+    #!!! need ask about finetune process
+    '''if trainable_layers < 0 or trainable_layers > 5:
+        raise ValueError(f"Trainable layers should be in the range [0,5], got {trainable_layers}")
+    layers_to_train = ["layer4", "layer3", "layer2", "layer1", "conv1"][:trainable_layers]
+    if trainable_layers == 5:
+        layers_to_train.append("bn1")
+    for name, parameter in backbone.named_parameters():
+        if all(not name.startswith(layer) for layer in layers_to_train):
+            parameter.requires_grad_(False)'''
+
+    if returned_layers is None:
+        returned_layers = [1, 2, 3, 4]
+    if min(returned_layers) <= 0 or max(returned_layers) >= 5:
+        raise ValueError(f"Each returned layer should be in the range [1,4]. Got {returned_layers}")
+    return_layers = {f"feat{k}": str(v) for v, k in enumerate(returned_layers)}
+
+    in_channels_list = [256 for i in returned_layers]
+    out_channels = 256
+    return BackboneWithFPN_vitdet(
+        backbone, fpn, return_layers, in_channels_list, out_channels, spatial_dims=spatial_dims
+    )
+
+#!!! need check the pretrained backbone setting
+def vitdet_fpn_feature_extractor(
+    backbone: nn.Module,
+    fpn: nn.Module,
+    spatial_dims: int,
+    pretrained_backbone: bool = False,
+    returned_layers: Sequence[int] = (1, 2, 3),
+    trainable_backbone_layers: int | None = None,
+) -> BackboneWithFPN_vitdet:
+    """
+    Constructs a feature extractor network with a ViTdet-FPN backbone.
+    Similar to resnet_fpn_feature_extractor in MONAI
+
+    The returned feature_extractor network takes an image tensor as inputs,
+    and outputs a dictionary that maps string to the extracted feature maps (Tensor).
+
+    The input to the returned feature_extractor is expected to be a list of tensors,
+    each of shape ``[C, H, W]`` or ``[C, H, W, D]``,
+    one for each image. Different images can have different sizes.
+
+    Args:
+        backbone: a ResNet model, used as backbone.
+        fpn: SimpleFeaturePyramid, used as fpn.
+        spatial_dims: number of spatial dimensions of the images. We support both 2D and 3D images.
+        pretrained_backbone: whether the backbone has been pre-trained.
+        returned_layers: returned layers to extract feature maps. Each returned layer should be in the range [1,4].
+            len(returned_layers)+1 will be the number of extracted feature maps.
+            There is an extra maxpooling layer LastLevelMaxPool() appended.
+        trainable_backbone_layers: number of trainable (not frozen) resnet layers starting from final block.
+            Valid values are between 0 and 5, with 5 meaning all backbone layers are trainable.
+            When pretrained_backbone is False, this value is set to be 5.
+            When pretrained_backbone is True, if ``None`` is passed (the default) this value is set to 3.
+    """
+    # If pretrained_backbone is False, valid_trainable_backbone_layers = 5.
+    # If pretrained_backbone is True, valid_trainable_backbone_layers = trainable_backbone_layers or 3 if None.
+    valid_trainable_backbone_layers: int = _validate_trainable_layers(
+        pretrained_backbone, trainable_backbone_layers, max_value=5, default_value=3
+    )
+
+    feature_extractor = _vit_fpn_extractor(
+        backbone,
+        fpn,
+        spatial_dims,
+        valid_trainable_backbone_layers,
+        returned_layers=list(returned_layers),
+    )
+    return feature_extractor

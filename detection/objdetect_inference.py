@@ -45,11 +45,12 @@ from monai.apps.detection.networks.retinanet_network import (
 from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape
 from monai.data import DataLoader, Dataset, box_utils, load_decathlon_datalist
 from monai.data.utils import no_collation
-from monai.networks.nets import resnet, ViT
+from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
-from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool
+from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet
+from network.vitdet import vitdet_fpn_feature_extractor
 
 class OBJDetectInference():
     """
@@ -514,7 +515,7 @@ class OBJDetectInference():
         else:
             pass ###!!! need raise error
     #retina net
-    def build_retinanet(self,anchor_generator):
+    def build_retinanet(self,anchor_generator, *args, **kwargs):
         #tmp code
         conv1_t_size = [max(7, 2 * s + 1) for s in self.args.conv1_t_stride]
         backbone = resnet.ResNet(
@@ -545,42 +546,78 @@ class OBJDetectInference():
         )
         return net
     #vitdet
-    def build_vitdet(self,*args, **kwargs):
+    def build_vitdet(self, anchor_generator, *args, **kwargs):
         # Base
         embed_dim, depth, num_heads, dp = 768, 12, 12, 0.1
+        in_channels, img_size, patch_size, out_channels = 3, 1024, 16, 256
+        window_szie, mlp_dim = 14, embed_dim*4
+        scale_factors = [4.0, 2.0, 1.0, 0.5]
+        window_block_indexes=[
+                # 2, 5, 8 11 for global attention
+                0,
+                1,
+                3,
+                4,
+                6,
+                7,
+                9,
+                10,
+                ]
         # 2conv in RPN:
         head_conv_dims = [-1, -1]
         # 4conv1fc box head
         box_head_conv_dims = [256, 256, 256, 256]
         box_head_fc_dims = [1024]
-
-        net = SimpleFeaturePyramid(
-            net=ViT(
-                in_channels=3, #input channel
-                img_size=1024,
-                patch_size=16,
+        backbone = ViTDet(
+                in_channels=in_channels, #input channel
+                img_size=img_size,
+                patch_size=patch_size,
                 hidden_size=embed_dim,
                 num_layers=depth,
                 num_heads=num_heads,
-                #drop_path_rate=dp not impl, it is not equal to dropout
-                #window_size=14 not impl
-                mlp_dim=embed_dim*4,
+                drop_path_rate=dp, #self impl, it is not equal to dropout
+                window_size=window_szie, #self impl
+                mlp_dim=mlp_dim,
                 qkv_bias=True,
                 #act_layer=nn.GELU
                 #norm_layer eps need to change from 1e-5 to 1e-6
-                #window_block_indexes not impl
+                window_block_indexes=window_block_indexes, #window_block_indexes self impl
                 #residual_block_indexes not used
-                #use_rel_pos=True not impl
-                #pretrain_img_size=224, ?
+                use_rel_pos=False, #no need to change pos encoding, self impl
+                #pretrain_img_size=224, not used now
                 #pretrain_use_cls_token=True, ?
-                #out_feature="last_feat", is name of the last feature, no need
-                ),
-            in_feature="${.net.out_feature}",
-            out_channels=256,
-            scale_factors=(4.0, 2.0, 1.0, 0.5),
+                out_feature="feat", #name of the last feature, no need
+                )
+        
+        net = SimpleFeaturePyramid(
+            input_shapes=backbone.output_shape(),
+            in_feature="feat", #need same as ViTdet output feature
+            out_channels=out_channels,
+            scale_factors=scale_factors, #feat1~5
             top_block=LastLevelMaxPool,
-            square_pad=1024,
+            square_pad=img_size,
             )
+        #a warper for later use
+        feature_extractor = vitdet_fpn_feature_extractor(
+            backbone=net,
+            spatial_dims=self.args.spatial_dims,
+            pretrained_backbone=False,
+            trainable_backbone_layers=None,
+            returned_layers=self.args.returned_layers,
+        )
+        
+        num_anchors = anchor_generator.num_anchors_per_location()[0]
+        # size_divisible (int or Sequence[int]) is the expectation on the input image shape.
+        #size_divisible = [s * 2 * 2 ** max(args.returned_layers) for s in feature_extractor.body.conv1.stride]
+        net = torch.jit.script(
+            RetinaNet(
+                spatial_dims=args.spatial_dims,
+                num_classes=len(args.fg_labels),
+                num_anchors=num_anchors,
+                feature_extractor=feature_extractor,
+                #size_divisible=size_divisible, ###!!! need find image size of luna16
+            )
+        )
         
         return net
     
@@ -588,8 +625,8 @@ class OBJDetectInference():
     def build_detector(self,net,anchor_generator,device,train=True,valid=True):
         if self.model_name=='retinanet':
             detector = self.build_retinanet_detector(net, anchor_generator, device, train, valid)
-        elif self.model_name=='vitdet':
-            detector = None #!!! need implement
+        elif self.model_name=='vitdet': #!!! need consider image mean and std
+            detector = self.build_retinanet_detector(net, anchor_generator, device, train, valid)
         return detector
     
     #retinanet
