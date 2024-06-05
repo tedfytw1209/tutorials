@@ -81,7 +81,7 @@ class OBJDetectInference():
             self.compute_dtype = torch.float32
         monai.config.print_config()
         if debug_dict.get('set_deter',False):
-            set_determinism(seed=0) #reset determinism for const training !!!
+            set_determinism(seed=0) #reset determinism for const training!
             torch.backends.cudnn.benchmark = True
             torch.set_num_threads(4)
 
@@ -91,7 +91,7 @@ class OBJDetectInference():
         for k, v in config_dict.items():
             setattr(class_args, k, v)
         # 1. define transform
-        ### !!!maybe different transform
+        ### !maybe different transform in different dataset other than luna16
         intensity_transform = ScaleIntensityRanged(
             keys=["image"],
             a_min=-1024,
@@ -269,7 +269,7 @@ class OBJDetectInference():
         """
         # 1-2. build network & load pre-train network
         net = self.build_net(anchor_generator)
-        #1-3. load pre-train network !!!
+        #1-3. load pre-train network !
         if pre_net!=None:
             net.load_state_dict(pre_net, strict=False)
 
@@ -277,7 +277,7 @@ class OBJDetectInference():
         detector = self.build_detector(net,anchor_generator,device,train=True,valid=True)
 
         # 2. Initialize training
-        # initlize optimizer, !!!need different version for different setting
+        # initlize optimizer, need different version for different setting
         optimizer, scheduler, scaler = self.train_setting(detector)
         # initialize tensorboard writer
         tensorboard_writer = SummaryWriter(self.args.tfevent_path)
@@ -450,10 +450,10 @@ class OBJDetectInference():
         else:
             print(f"Use model from function args")
 
-        # 3) build detector (!!!changed to validation like detector)
+        # 3) build detector (!changed to validation like detector)
         detector = self.build_detector(net,anchor_generator,device,train=False,valid=True)
 
-        ###!!! need change to our evaluation metric
+        ###! use mscoco evaluation metric noe, mAP,mAR
         # 4. apply trained model
         detector.eval()
         with torch.no_grad():
@@ -510,10 +510,10 @@ class OBJDetectInference():
     def build_net(self,*args: Any, **kwargs: Any):
         if self.model_name=='retinanet':
             return self.build_retinanet(*args, **kwargs)
-        elif self.model_name=='vitdet': #!!! need implement
+        elif self.model_name=='vitdet':
             return self.build_vitdet(*args, **kwargs)
         else:
-            pass ###!!! need raise error
+            raise ValueError("Could not find correct backbone model name (self.model_name=%s) , please specify it."%(self.model_name))
     #retina net
     def build_retinanet(self,anchor_generator, *args, **kwargs):
         #tmp code
@@ -625,13 +625,14 @@ class OBJDetectInference():
     def build_detector(self,net,anchor_generator,device,train=True,valid=True):
         if self.model_name=='retinanet':
             detector = self.build_retinanet_detector(net, anchor_generator, device, train, valid)
-        elif self.model_name=='vitdet': #!!! need consider image mean and std
+        elif self.model_name=='vitdet':
             detector = self.build_retinanet_detector(net, anchor_generator, device, train, valid)
         return detector
     
     #retinanet
     def build_retinanet_detector(self,net,anchor_generator,device,train=True,valid=True):
         detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
+        #!!! need consider image mean and std
         # set training components
         if train:
             detector.set_atss_matcher(num_candidates=4, center_in_gt=False)

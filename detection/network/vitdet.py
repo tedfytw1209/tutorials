@@ -188,7 +188,7 @@ class SABlock(nn.Module): ###!!! Not checked
             qkv_bias (bool, optional): bias term for the qkv linear layer. Defaults to False.
             save_attn (bool, optional): to make accessible the attention matrix. Defaults to False.
             dim_head (int, optional): dimension of each head. Defaults to hidden_size // num_heads.
-            rel_pos (bool): If True, add relative positional embeddings to the attention map.
+            rel_pos (bool): If True, add relative positional embeddings to the attention map. !!!not impl
             rel_pos_zero_init (bool): If True, zero initialize relative positional parameters.
             input_size (int or None): Input resolution for calculating the relative positional
                 parameter size.
@@ -216,7 +216,7 @@ class SABlock(nn.Module): ###!!! Not checked
         self.save_attn = save_attn
         self.att_mat = torch.Tensor()
         
-        self.use_rel_pos = use_rel_pos
+        '''self.use_rel_pos = use_rel_pos
         if self.use_rel_pos: #!!!not check
             # initialize relative positional embeddings
             self.rel_pos_h = nn.Parameter(torch.zeros(2 * input_size[0] - 1, self.dim_head))
@@ -224,15 +224,24 @@ class SABlock(nn.Module): ###!!! Not checked
 
             if not rel_pos_zero_init:
                 nn.init.trunc_normal_(self.rel_pos_h, std=0.02)
-                nn.init.trunc_normal_(self.rel_pos_w, std=0.02)
+                nn.init.trunc_normal_(self.rel_pos_w, std=0.02)'''
 
     def forward(self, x):
+        """
+
+        Args:
+            x (tensor): Input features with shape (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size) or
+            (B, H /patch_szie* W/patch_szie, hidden_size)
+
+        Returns:
+            tensor: Output features with same shape
+        """
         B, H, W, _ = x.shape
         output = self.input_rearrange(self.qkv(x))
         q, k, v = output[0], output[1], output[2]
         att_mat = (torch.einsum("blxd,blyd->blxy", q, k) * self.scale)
-        if self.use_rel_pos: #!!!not check
-            att_mat = add_decomposed_rel_pos(att_mat, q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W))
+        '''if self.use_rel_pos: #!!!not check
+            att_mat = add_decomposed_rel_pos(att_mat, q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W))'''
         att_mat = att_mat.softmax(dim=-1)
         
         if self.save_attn:
@@ -282,7 +291,7 @@ class TransformerBlock(nn.Module): ###!!! Not checked
             use_rel_pos (bool, optional): If True, add relative positional embeddings to the attention map.
             rel_pos_zero_init (bool, optional): If True, zero initialize relative positional parameters.
             input_size (int or None): Input resolution for calculating the relative positional
-                parameter size.
+                parameter size and reshape.
         """
 
         super().__init__()
@@ -301,16 +310,31 @@ class TransformerBlock(nn.Module): ###!!! Not checked
                             input_size=input_size if window_size == 0 else (window_size, window_size))
         self.norm2 = nn.LayerNorm(hidden_size)
         self.window_size = window_size
+        self.input_size = input_size
+        self.hidden_size = hidden_size
 
     def forward(self, x):
+        """forward
+
+        Args:
+            x (tensor): Input tensor with shape (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size) or
+            (B, H /patch_szie* W/patch_szie, hidden_size)
+
+        Returns:
+            tensor: Same shape of input
+        """
         short_cut = x
         x = self.norm1(x)
-        if self.window_size > 0:
+        if self.window_size > 0: # (B, HW, C) -> (B, H, W, C) -> (B*windows, window_szie, window_size, C) -> (B*windows, window_szie*window_size, C)
+            x = x.view(-1, self.input_size[0], self.input_size[1], self.hidden_size)
             H, W = x.shape[1], x.shape[2]
             x, pad_hw = window_partition(x, self.window_size)
-        x = self.attn(x)
-        if self.window_size > 0:
+            x = x.view(-1, self.window_size*self.window_size, self.hidden_size)
+        x = self.attn(x) # same shape
+        if self.window_size > 0: #(B*windows, window_szie*window_size, C)->(B*windows, window_szie, window_size, C)->(B, H, W, C)->(B, HW, C)
+            x = x.view(-1, self.window_size, self.window_size, self.hidden_size)
             x = window_unpartition(x, self.window_size, pad_hw, (H, W))
+            x = x.view(-1, self.input_size[0]* self.input_size[1], self.hidden_size)
         x = short_cut + self.drop_path(x)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
@@ -378,22 +402,37 @@ class ViTDet(nn.Module): ###!!! Not checked
         if hidden_size % num_heads != 0:
             raise ValueError("hidden_size should be divisible by num_heads.")
         
+        #add for clearify patch and image size/shape
+        if isinstance(patch_size,int):
+            patch_size_val = patch_size
+            patch_shape = [patch_size] * spatial_dims
+        else:
+            assert len(patch_size) == spatial_dims
+            patch_size_val = patch_size[0]
+            patch_shape = patch_size
+        
+        if isinstance(img_size,int):
+            img_size_val = img_size
+            img_shape = [img_size] * spatial_dims
+        else:
+            assert len(img_size) == spatial_dims
+            img_size_val = img_size[0]
+            img_shape = img_size
+        patched_input_shape = [img/patch for img,patch in zip(img_shape,patch_shape)]
+        self.patched_input_shape = patched_input_shape
         # stochastic depth decay rule
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, num_layers)]
         self._out_feature_channels = {out_feature: hidden_size}
-        self._out_feature_strides = {out_feature: patch_size}
+        self._out_feature_strides = {out_feature: patch_size_val}
         self._out_features = [out_feature]
-        if isinstance(patch_size,int):
-            patch_size_hw = patch_size
-        else:
-            patch_size_hw = patch_size[0]
+        self.hidden_size = hidden_size
 
         self.classification = classification
         #!!! need check position encoding code
         self.patch_embedding = PatchEmbeddingBlock(
             in_channels=in_channels,
-            img_size=img_size,
-            patch_size=patch_size,
+            img_size=img_shape, #use shape for convenience
+            patch_size=patch_shape,
             hidden_size=hidden_size,
             num_heads=num_heads,
             proj_type=proj_type,
@@ -408,7 +447,7 @@ class ViTDet(nn.Module): ###!!! Not checked
                                 window_size=window_size if i in window_block_indexes else 0,
                                 use_rel_pos=use_rel_pos,
                                 rel_pos_zero_init=rel_pos_zero_init,
-                                input_size=(img_size // patch_size_hw, img_size // patch_size_hw),
+                                input_size=patched_input_shape,
                                 )
                 for i in range(num_layers)
             ]
@@ -422,6 +461,16 @@ class ViTDet(nn.Module): ###!!! Not checked
                 self.classification_head = nn.Linear(hidden_size, num_classes)  # type: ignore
 
     def forward(self, x):
+        """forward
+
+        Args:
+            x (tensor): Input image with shape (B, C, H, W, D) or (B, C, H, W)
+
+        Returns:
+            Output last features: Dict with {self._out_features[0]: classification logits (B, num_classes) if self.classification==True
+            or feature maps (B, C, H/patch, W/patch, D) or (B, C, H/patch, W/patch)}
+        """
+        #PatchEmbeddingBlock Input: (B, C, H, W, D), Output: (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)
         x = self.patch_embedding(x)
         if hasattr(self, "cls_token"):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
@@ -433,8 +482,8 @@ class ViTDet(nn.Module): ###!!! Not checked
         x = self.norm(x)
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
-        #!!! need check shape
-        #!!! x.permute(0, 3, 1, 2)=back to (N,C,H,W) in vitdet
+        # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
+        x = x.transpose(-1,-2).view(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
         return {self._out_features[0]:x}, hidden_states_out
     
     def output_shape(self):
@@ -465,12 +514,12 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         scale_factors,
         top_block=None,
         square_pad=0,
+        spatial_dims=2,
     ):
         """
         Args:
             input_shapes: input_shapes of the net (net.output_shape()).
-            in_feature (str): names of the input feature maps coming
-                from the net.
+            in_feature (str): names of the input feature maps coming from the net.
             out_channels (int): number of channels in the output feature maps.
             scale_factors (list[float]): list of scaling factors to upsample or downsample
                 the input features for creating pyramid features.
@@ -482,11 +531,13 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                 this block, and "in_feature", which is a string representing
                 its input feature (e.g., p5).
             square_pad (int): If > 0, require input images to be padded to specific square size.
+            spatial_dims (int): default is 2, not implement spatial_dims=3 case now.
         """
         super(SimpleFeaturePyramid, self).__init__()
 
         self.scale_factors = scale_factors
-
+        
+        #input_shapes[in_feature].stride = patch_size, [4,8,16,32]
         strides = [int(input_shapes[in_feature].stride / scale) for scale in scale_factors]
         #_assert_strides_are_log2_contiguous(strides)
 
@@ -543,7 +594,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         self.top_block = top_block
         # Return feature names are "p<stage>", like ["p2", "p3", ..., "p6"]
         self._out_feature_strides = {"feat{}".format(int(math.log2(s))): s for s in strides}
-        # top block output feature maps.
+        # top block output feature maps, add another strides.
         if self.top_block is not None:
             for s in range(stage, stage + self.top_block.num_levels):
                 self._out_feature_strides["feat{}".format(s + 1)] = 2 ** (s + 1)
@@ -561,13 +612,20 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
     def forward(self, x):
         """
         Args:
-            x: Output of vitdet model
+            x: Output of vitdet model (B, H/patch, W/patch, C)
         Returns:
             dict[str->Tensor]:
                 mapping from feature map name to pyramid feature map tensor
                 in high to low resolution order. Returned feature names follow the FPN
                 convention: "p<stage>", where stage has stride = 2 ** stage e.g.,
-                ["feat2", "feat3", ..., "feat6"].
+                ["feat2", "feat3", ..., "feat6"]. patch default 16, 5 feature maps
+                {
+                    "feat2": Tensor(B, 4*H/patch, 4*W/patch, C)
+                    "feat3": Tensor(B, 2*H/patch, 2*W/patch, C)
+                    "feat4": Tensor(B, H/patch, W/patch, C)
+                    "feat5": Tensor(B, H/(2*patch), W/(2*patch), C)
+                    "feat6": Tensor(B, H/(4*patch), W/(4*patch), C)
+                }
         """
         #bottom_up_features = self.net(x)
         bottom_up_features = x
@@ -595,7 +653,7 @@ class LastLevelMaxPool(nn.Module):
     def __init__(self, spatial_dims: int = 2):
         super().__init__()
         self.num_levels = 1
-        self.in_feature = "feat5"
+        self.in_feature = "feat5" #!!!need change depend on scales
         pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[Pool.MAX, spatial_dims]
         self.maxpool = pool_type(kernel_size=1, stride=2, padding=0)
 
