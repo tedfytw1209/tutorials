@@ -730,7 +730,14 @@ if __name__ == "__main__":
         "-t",
         "--testmode",
         default="full",
-        help="which part of func need to test, not implement now !!!",
+        help="which part of func need to test",
+    )
+    parser.add_argument( ###!!! not implement now
+        "-d",
+        "--deter",
+        default=False,
+        action="store_true",
+        help="set determinism for model (seed=0)",
     )
     args = parser.parse_args()
     env_dict = json.load(open(args.environment_file, "r"))
@@ -742,6 +749,8 @@ if __name__ == "__main__":
         debug_dict['use_test'] = False
     elif args.testmode=='test': #test func test
         debug_dict['use_train'] = False
+    if args.deter:
+        debug_dict["set_deter"] = True
     #
     inferer = OBJDetectInference(env_dict=env_dict, config_dict=config_dict, debug_dict=debug_dict, verbose=args.verbose)
     inferer.compute(pretrain_network=pretrained_model)
