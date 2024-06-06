@@ -140,7 +140,7 @@ class OBJDetectInference():
         self.amp = amp
         self.use_train = debug_dict.get('use_train',True)
         self.use_test = debug_dict.get('use_test',True)
-        self.model_name = config_dict.get('model_name',"")
+        self.model_name = config_dict.get('model_name',"retinanet")
     
     def make_datasets(self,class_args,train_transforms,val_transforms,inference_transforms):
         train_data = load_decathlon_datalist(
@@ -157,7 +157,7 @@ class OBJDetectInference():
             train_ds,
             batch_size=1,
             shuffle=True,
-            num_workers=4,
+            num_workers=7,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
             persistent_workers=True,
