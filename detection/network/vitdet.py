@@ -633,7 +633,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         #bottom_up_features = self.net(x)
         bottom_up_features = x
         features = bottom_up_features[self.in_feature]
-        results = []
+        results: list[Tensor] = []
 
         for stage in self.stages:
             out_features = stage(features)
