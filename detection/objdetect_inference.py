@@ -596,8 +596,8 @@ class OBJDetectInference():
         #size_divisible = [s * 2 * 2 ** max(args.returned_layers) for s in feature_extractor.body.conv1.stride]
         net = torch.jit.script(
             RetinaNet(
-                spatial_dims=args.spatial_dims,
-                num_classes=len(args.fg_labels),
+                spatial_dims=self.args.spatial_dims,
+                num_classes=len(self.args.fg_labels),
                 num_anchors=num_anchors,
                 feature_extractor=feature_extractor,
                 #size_divisible=size_divisible, ###!!!image size of luna16?
