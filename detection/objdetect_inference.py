@@ -547,44 +547,29 @@ class OBJDetectInference():
         return net
     #vitdet
     def build_vitdet(self, anchor_generator, *args, **kwargs):
-        # Base
-        embed_dim, depth, num_heads, dp = 768, 12, 12, 0.1
-        in_channels, img_size, patch_size, out_channels = 3, 1024, 16, 256
-        window_szie, mlp_dim = 14, embed_dim*4
-        scale_factors = [4.0, 2.0, 1.0, 0.5]
-        window_block_indexes=[
-                # 2, 5, 8 11 for global attention
-                0,
-                1,
-                3,
-                4,
-                6,
-                7,
-                9,
-                10,
-                ]
-        # 2conv in RPN:
-        head_conv_dims = [-1, -1]
-        # 4conv1fc box head
-        box_head_conv_dims = [256, 256, 256, 256]
-        box_head_fc_dims = [1024]
+        # Parameter settings are in config.json file
+        if hasattr(self.args,"model_spatial_dims"):
+            model_spatial_dims = self.args.model_spatial_dims
+        else:
+            model_spatial_dims = self.args.spatial_dims
         backbone = ViTDet(
-                in_channels=in_channels, #input channel
-                img_size=img_size,
-                patch_size=patch_size,
-                hidden_size=embed_dim,
-                num_layers=depth,
-                num_heads=num_heads,
-                drop_path_rate=dp, #self impl, it is not equal to dropout
-                window_size=window_szie, #self impl
-                mlp_dim=mlp_dim,
+                in_channels=self.args.n_input_channels, #input channel
+                img_size=self.args.img_size,
+                patch_size=self.args.model_patch_size,
+                hidden_size=self.args.embed_dim,
+                mlp_dim=self.args.mlp_dim,
+                num_layers=self.args.depth,
+                num_heads=self.args.num_heads,
+                spatial_dims=model_spatial_dims,
                 qkv_bias=True,
+                drop_path_rate=self.args.dp, #self impl, it is not equal to dropout
+                window_size=self.args.window_szie, #self impl
                 #act_layer=nn.GELU
                 #norm_layer eps need to change from 1e-5 to 1e-6
-                window_block_indexes=window_block_indexes, #window_block_indexes self impl
+                window_block_indexes=self.args.window_block_indexes, #window_block_indexes self impl
                 #residual_block_indexes not used
                 use_rel_pos=False, #no need to change pos encoding, self impl
-                #pretrain_img_size=224, not used now
+                pretrain_img_size=224, #not used now
                 #pretrain_use_cls_token=True, ?
                 out_feature="feat", #name of the last feature, no need
                 )
@@ -592,10 +577,11 @@ class OBJDetectInference():
         net = SimpleFeaturePyramid(
             input_shapes=backbone.output_shape(),
             in_feature="feat", #need same as ViTdet output feature
-            out_channels=out_channels,
-            scale_factors=scale_factors, #feat1~5
+            out_channels=self.args.out_channels,
+            scale_factors=self.args.scale_factors, #feat1~5
             top_block=LastLevelMaxPool,
-            square_pad=img_size,
+            square_pad=self.args.img_size,
+            spatial_dims=model_spatial_dims
             )
         #a warper for later use
         feature_extractor = vitdet_fpn_feature_extractor(
@@ -615,7 +601,7 @@ class OBJDetectInference():
                 num_classes=len(args.fg_labels),
                 num_anchors=num_anchors,
                 feature_extractor=feature_extractor,
-                #size_divisible=size_divisible, ###!!! need find image size of luna16
+                #size_divisible=size_divisible, ###!!!image size of luna16?
             )
         )
         

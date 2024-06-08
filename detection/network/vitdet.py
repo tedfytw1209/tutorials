@@ -426,6 +426,7 @@ class ViTDet(nn.Module): ###!!! Not checked
         self._out_feature_strides = {out_feature: patch_size_val}
         self._out_features = [out_feature]
         self.hidden_size = hidden_size
+        self.spatial_dims = spatial_dims
 
         self.classification = classification
         #!!! need check position encoding code
@@ -536,7 +537,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         super(SimpleFeaturePyramid, self).__init__()
 
         self.scale_factors = scale_factors
-        
+        self.spatial_dims = spatial_dims
         #input_shapes[in_feature].stride = patch_size, [4,8,16,32]
         strides = [int(input_shapes[in_feature].stride / scale) for scale in scale_factors]
         #_assert_strides_are_log2_contiguous(strides)
@@ -633,7 +634,8 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         results = []
 
         for stage in self.stages:
-            results.append(stage(features))
+            out_features = stage(features)
+            results.append(out_features)
 
         if self.top_block is not None:
             if self.top_block.in_feature in bottom_up_features:
@@ -692,15 +694,11 @@ class BackboneWithFPN_vitdet(nn.Module):
         super().__init__()
 
         # if spatial_dims is not specified, try to find it from backbone.
-        if spatial_dims is None:
-            if hasattr(backbone, "spatial_dims") and isinstance(backbone.spatial_dims, int):
-                spatial_dims = backbone.spatial_dims
-            elif isinstance(backbone.conv1, nn.Conv2d):
-                spatial_dims = 2
-            elif isinstance(backbone.conv1, nn.Conv3d):
-                spatial_dims = 3
-            else:
-                raise ValueError("Could not find spatial_dims of backbone, please specify it.")
+        self.spatial_dims = spatial_dims
+        self.model_spatial_dims = backbone.spatial_dims
+        if self.spatial_dims!=self.model_spatial_dims:
+            self.dim_change_flag = True
+            print("Dim change from %d to %d"%(self.spatial_dims,self.model_spatial_dims))
 
         #self.body = torchvision_models._utils.IntermediateLayerGetter(backbone, return_layers=return_layers) #!!! not understand
         self.body = backbone
@@ -717,8 +715,13 @@ class BackboneWithFPN_vitdet(nn.Module):
         Returns:
             feature maps after FPN layers. They are ordered from highest resolution first.
         """
+        #change size if spatial_dim==2 and last dim==1
+        if self.dim_change_flag and x.shape[-1]==1:
+            x = torch.squeeze(x, dim=-1)
         x, hidden_states = self.body(x)  # backbone
         y: dict[str, Tensor] = self.fpn(x)  # FPN
+        if self.dim_change_flag: #change back for detector used, !!!need check
+            return {f: torch.unsqueeze(res,dim=-2) for f, res in y.items()}
         return y
 
 #!!! need change

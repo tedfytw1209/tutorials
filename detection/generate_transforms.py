@@ -24,6 +24,8 @@ from monai.transforms import (
     RandRotated,
     RandScaleIntensityd,
     RandShiftIntensityd,
+    Identity,
+    SqueezeDim,
 )
 from monai.apps.detection.transforms.dictionary import (
     AffineBoxToImageCoordinated,
@@ -51,6 +53,7 @@ def generate_detection_train_transform(
     batch_size,
     affine_lps_to_ras=False,
     amp=True,
+    spatial_dims=3,
 ):
     """
     Generate training transform for detection.
@@ -67,6 +70,7 @@ def generate_detection_train_transform(
         affine_lps_to_ras: Usually False.
             Set True only when the original images were read by itkreader with affine_lps_to_ras=True
         amp: whether to use half precision
+        spatial_dims: dim of image(default 3), need SqueezeDim in spatial_dims=2.
 
     Return:
         training transform for detection
@@ -75,6 +79,12 @@ def generate_detection_train_transform(
         compute_dtype = torch.float16
     else:
         compute_dtype = torch.float32
+    
+    if spatial_dims==3:
+        add_transform = Identity()
+    elif spatial_dims==2:
+        add_transform = SqueezeDim(dim=-1)
+    
 
     train_transforms = Compose(
         [
@@ -103,6 +113,8 @@ def generate_detection_train_transform(
                 pos=1,
                 neg=1,
             ),
+            ### !!! add function to delete last dim if dim==1
+            #add_transform,
             RandZoomBoxd(
                 image_keys=[image_key],
                 box_keys=[box_key],
@@ -199,6 +211,7 @@ def generate_detection_val_transform(
     intensity_transform,
     affine_lps_to_ras=False,
     amp=True,
+    spatial_dims=3,
 ):
     """
     Generate validation transform for detection.
@@ -213,6 +226,7 @@ def generate_detection_val_transform(
         affine_lps_to_ras: Usually False.
             Set True only when the original images were read by itkreader with affine_lps_to_ras=True
         amp: whether to use half precision
+        spatial_dims: dim of image(default 3), need SqueezeDim in spatial_dims=2.
 
     Return:
         validation transform for detection
@@ -221,6 +235,11 @@ def generate_detection_val_transform(
         compute_dtype = torch.float16
     else:
         compute_dtype = torch.float32
+    
+    if spatial_dims==3:
+        add_transform = Identity()
+    elif spatial_dims==2:
+        add_transform = SqueezeDim(dim=-1)
 
     val_transforms = Compose(
         [
@@ -254,6 +273,7 @@ def generate_detection_inference_transform(
     intensity_transform,
     affine_lps_to_ras=False,
     amp=True,
+    spatial_dims=3,
 ):
     """
     Generate validation transform for detection.
@@ -269,6 +289,7 @@ def generate_detection_inference_transform(
         affine_lps_to_ras: Usually False.
             Set True only when the original images were read by itkreader with affine_lps_to_ras=True
         amp: whether to use half precision
+        spatial_dims: dim of image(default 3), need SqueezeDim in spatial_dims=2.
 
     Return:
         validation transform for detection
@@ -277,6 +298,11 @@ def generate_detection_inference_transform(
         compute_dtype = torch.float16
     else:
         compute_dtype = torch.float32
+    ###!!! bug if spatial_dims==2
+    if spatial_dims==3:
+        add_transform = Identity()
+    elif spatial_dims==2:
+        add_transform = SqueezeDim(dim=-1)
 
     test_transforms = Compose(
         [
