@@ -957,6 +957,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             head_outputs = predict_with_inferer(
                 images, self.network, keys=[self.cls_key, self.box_reg_key], inferer=self.inferer
             )
+        print(self.network.feature_extractor.out_channels)
         print('self.cls_key:')
         for t in head_outputs[self.cls_key]:
             print('Shape: ', t.shape)
