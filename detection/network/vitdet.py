@@ -757,7 +757,7 @@ class BackboneWithFPN_vitdet(nn.Module):
         features: dict[str, Tensor] = self.body(x)  # backbone
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used, !!!need check
-            return {f: torch.unsqueeze(res,dim=-2) for f, res in y.items()}
+            return {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
         return y
 
 #!!! need change
