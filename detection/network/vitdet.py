@@ -691,7 +691,7 @@ class LastLevelMaxPool(nn.Module):
     def __init__(self, spatial_dims: int = 2):
         super().__init__()
         self.num_levels = 1
-        self.in_feature = "feat5" #!!!need change depend on scales
+        self.in_feature = "feat2" #!!!need change depend on scales
         pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[Pool.MAX, spatial_dims]
         self.maxpool = pool_type(kernel_size=1, stride=2, padding=0)
 
