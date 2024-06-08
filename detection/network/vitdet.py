@@ -612,10 +612,10 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             "size_divisiblity": self._size_divisibility,
             "square_size": self._square_pad,
         }
-    def forward(self, x: Tensor) -> dict[str, Tensor]:
+    def forward(self, x: dict[str, Tensor]) -> dict[str, Tensor]:
         """
         Args:
-            x: Output of vitdet model (B, H/patch, W/patch, C)
+            x: Output of vitdet model dict[str, Tensor(B, H/patch, W/patch, C)]
         Returns:
             dict[str->Tensor]:
                 mapping from feature map name to pyramid feature map tensor
@@ -720,8 +720,8 @@ class BackboneWithFPN_vitdet(nn.Module):
         #change size if spatial_dim==2 and last dim==1
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
-        x = self.body(x)  # backbone
-        y: dict[str, Tensor] = self.fpn(x)  # FPN
+        features: dict[str, Tensor] = self.body(x)  # backbone
+        y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used, !!!need check
             return {f: torch.unsqueeze(res,dim=-2) for f, res in y.items()}
         return y
