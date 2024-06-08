@@ -110,6 +110,7 @@ class OBJDetectInference():
             class_args.batch_size,
             affine_lps_to_ras=True,
             amp=amp,
+            spatial_dims=class_args.spatial_dims,
         )
         val_transforms = generate_detection_val_transform(
             "image",
@@ -119,6 +120,8 @@ class OBJDetectInference():
             intensity_transform,
             affine_lps_to_ras=True,
             amp=amp,
+            spatial_dims=class_args.spatial_dims,
+            patch_size=config_dict.get('val_data_size',None),
         )
         # !!change to val transform
         inference_transforms = generate_detection_val_transform(
@@ -129,6 +132,8 @@ class OBJDetectInference():
             intensity_transform,
             affine_lps_to_ras=True,
             amp=amp,
+            spatial_dims=class_args.spatial_dims,
+            patch_size=config_dict.get('val_data_size',None),
         )
         # 2. prepare training data
         self.make_datasets(class_args,train_transforms,val_transforms,inference_transforms)

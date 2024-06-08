@@ -114,7 +114,7 @@ def generate_detection_train_transform(
                 neg=1,
             ),
             ### !!! add function to delete last dim if dim==1
-            #add_transform,
+            add_transform,
             RandZoomBoxd(
                 image_keys=[image_key],
                 box_keys=[box_key],
@@ -212,6 +212,7 @@ def generate_detection_val_transform(
     affine_lps_to_ras=False,
     amp=True,
     spatial_dims=3,
+    patch_size=None,
 ):
     """
     Generate validation transform for detection.
@@ -227,7 +228,7 @@ def generate_detection_val_transform(
             Set True only when the original images were read by itkreader with affine_lps_to_ras=True
         amp: whether to use half precision
         spatial_dims: dim of image(default 3), need SqueezeDim in spatial_dims=2.
-
+        patch_size: patch_size to crop image to 2d
     Return:
         validation transform for detection
     """
@@ -240,6 +241,20 @@ def generate_detection_val_transform(
         add_transform = Identity()
     elif spatial_dims==2:
         add_transform = SqueezeDim(dim=-1)
+    
+    if patch_size and spatial_dims==2:
+        crop_transform = RandCropBoxByPosNegLabeld(
+                image_keys=[image_key],
+                box_keys=box_key,
+                label_keys=label_key,
+                spatial_size=patch_size,
+                whole_box=True,
+                num_samples=1,
+                pos=1,
+                neg=1,
+            )
+    else:
+        crop_transform = Identity()
 
     val_transforms = Compose(
         [
@@ -256,7 +271,9 @@ def generate_detection_val_transform(
                 box_ref_image_keys=image_key,
                 image_meta_key_postfix="meta_dict",
                 affine_lps_to_ras=affine_lps_to_ras,
-            ),
+            ), #add for convert to 2d
+            crop_transform,
+            add_transform,
             EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
             EnsureTyped(keys=label_key, dtype=torch.long),
         ]
