@@ -577,7 +577,7 @@ class OBJDetectInference():
             in_feature="feat", #need same as ViTdet output feature
             out_channels=self.args.out_channels,
             scale_factors=self.args.scale_factors, #feat1~5
-            top_block=LastLevelMaxPool,
+            top_block=LastLevelMaxPool(),
             square_pad=self.args.img_size,
             spatial_dims=model_spatial_dims
             )
