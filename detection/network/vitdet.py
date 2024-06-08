@@ -330,11 +330,13 @@ class TransformerBlock(nn.Module): ###!!! Not checked
             H, W = x.shape[1], x.shape[2]
             x, pad_hw = window_partition(x, self.window_size)
             x = x.view(-1, self.window_size*self.window_size, self.hidden_size)
-        x = self.attn(x) # same shape
-        if self.window_size > 0: #(B*windows, window_szie*window_size, C)->(B*windows, window_szie, window_size, C)->(B, H, W, C)->(B, HW, C)
+            x = self.attn(x) # same shape
+            #(B*windows, window_szie*window_size, C)->(B*windows, window_szie, window_size, C)->(B, H, W, C)->(B, HW, C)
             x = x.view(-1, self.window_size, self.window_size, self.hidden_size)
             x = window_unpartition(x, self.window_size, pad_hw, (H, W))
             x = x.view(-1, self.input_size[0]* self.input_size[1], self.hidden_size)
+        else:
+            x = self.attn(x) # same shape
         x = short_cut + self.drop_path(x)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
