@@ -67,8 +67,8 @@ def window_partition(x, window_size):
     """
     B, H, W, C = x.shape
 
-    pad_h = (window_size - H % window_size) % window_size
-    pad_w = (window_size - W % window_size) % window_size
+    pad_h = int((window_size - H % window_size) % window_size)
+    pad_w = int((window_size - W % window_size) % window_size)
     if pad_h > 0 or pad_w > 0:
         x = F.pad(x, [0, 0, 0, pad_w, 0, pad_h])
     Hp, Wp = H + pad_h, W + pad_w
