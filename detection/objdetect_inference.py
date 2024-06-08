@@ -140,7 +140,7 @@ class OBJDetectInference():
         self.amp = amp
         self.use_train = debug_dict.get('use_train',True)
         self.use_test = debug_dict.get('use_test',True)
-        self.model_name = config_dict.get('model_name',"retinanet")
+        self.model_name = config_dict.get('model',"retinanet")
     
     def make_datasets(self,class_args,train_transforms,val_transforms,inference_transforms):
         train_data = load_decathlon_datalist(
@@ -231,13 +231,11 @@ class OBJDetectInference():
         # returned_layers: when target boxes are small, set it smaller
         # base_anchor_shapes: anchor shape for the most high-resolution output,
         #   when target boxes are small, set it smaller
-        if self.model_name=='retinanet':
-            anchor_generator = AnchorGeneratorWithAnchorShape(
+        # retuened_layers = [1, 2] => feature_map_scales = [1, 2, 4]
+        anchor_generator = AnchorGeneratorWithAnchorShape(
                 feature_map_scales=[2**l for l in range(len(self.args.returned_layers) + 1)],
                 base_anchor_shapes=self.args.base_anchor_shapes,
             )
-        else:
-            anchor_generator = None
 
         coco_metric = COCOMetric(classes=["nodule"], iou_list=[0.1], max_detection=[100])
         train_results, test_results, compute_results = {},{},{}
@@ -649,22 +647,19 @@ class OBJDetectInference():
 
     #training settings
     def train_setting(self,detector):
-        if self.model_name=='retinanet':
-            optimizer = torch.optim.SGD(
-                detector.network.parameters(),
-                self.args.lr,
-                momentum=0.9,
-                weight_decay=3e-5,
-                nesterov=True,
-            )
-            after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1)
-            scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=10, after_scheduler=after_scheduler)
-            scaler = torch.cuda.amp.GradScaler() if self.amp else None
-            scheduler = scheduler_warmup
-            optimizer.zero_grad()
-            optimizer.step()
-        elif self.model_name=='vitdet':
-            pass #!!! need implement
+        optimizer = torch.optim.SGD(
+            detector.network.parameters(),
+            self.args.lr,
+            momentum=0.9,
+            weight_decay=3e-5,
+            nesterov=True,
+        )
+        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1)
+        scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=10, after_scheduler=after_scheduler)
+        scaler = torch.cuda.amp.GradScaler() if self.amp else None
+        scheduler = scheduler_warmup
+        optimizer.zero_grad()
+        optimizer.step()
         
         return optimizer, scheduler, scaler
     
