@@ -594,7 +594,7 @@ class OBJDetectInference():
         num_anchors = anchor_generator.num_anchors_per_location()[0]
         # size_divisible (int or Sequence[int]) is the expectation on the input image shape.
         #size_divisible = [s * 2 * 2 ** max(args.returned_layers) for s in feature_extractor.body.conv1.stride]
-        net = torch.jit.trace(
+        net = torch.jit.script(
             RetinaNet(
                 spatial_dims=self.args.spatial_dims,
                 num_classes=len(self.args.fg_labels),
