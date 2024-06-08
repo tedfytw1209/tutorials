@@ -763,6 +763,8 @@ class BackboneWithFPN_vitdet(nn.Module):
         if self.spatial_dims!=self.model_spatial_dims:
             self.dim_change_flag = True
             print("Dim change from %d to %d"%(self.spatial_dims,self.model_spatial_dims))
+        else:
+            self.dim_change_flag = False
 
         #self.body = torchvision_models._utils.IntermediateLayerGetter(backbone, return_layers=return_layers) #!!! not understand
         self.body = backbone
