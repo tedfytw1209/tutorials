@@ -639,6 +639,8 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         bottom_up_features = x
         features = bottom_up_features[self.in_feature]
         print('SimpleFeaturePyramid Input Shape: ', features.shape)
+        features = features.permute(0,3,1,2)
+        print('SimpleFeaturePyramid After permute Shape: ', features.shape)
         results: list[Tensor] = []
 
         for stage in self.stages:
