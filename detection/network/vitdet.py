@@ -463,7 +463,7 @@ class ViTDet(nn.Module): ###!!! Not checked
             else:
                 self.classification_head = nn.Linear(hidden_size, num_classes)  # type: ignore
 
-    def forward(self, x: Tensor) -> tuple[dict[str, Tensor],Sequence[Tensor]]:
+    def forward(self, x: Tensor) -> dict[str, Tensor]:
         """forward
 
         Args:
@@ -487,7 +487,7 @@ class ViTDet(nn.Module): ###!!! Not checked
             x = self.classification_head(x[:, 0])
         # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
         x = x.transpose(-1,-2).view(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
-        return {self._out_features[0]:x}, hidden_states_out
+        return {self._out_features[0]:x}
     
     def output_shape(self):
         """
@@ -720,7 +720,7 @@ class BackboneWithFPN_vitdet(nn.Module):
         #change size if spatial_dim==2 and last dim==1
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
-        x, hidden_states = self.body(x)  # backbone
+        x = self.body(x)  # backbone
         y: dict[str, Tensor] = self.fpn(x)  # FPN
         if self.dim_change_flag: #change back for detector used, !!!need check
             return {f: torch.unsqueeze(res,dim=-2) for f, res in y.items()}
