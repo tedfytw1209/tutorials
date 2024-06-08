@@ -54,7 +54,7 @@ class ShapeSpec:
     width: Optional[int] = None
     stride: Optional[int] = None
 
-def window_partition(x, window_size):
+def window_partition(x: Tensor, window_size: int):
     """
     Partition into non-overlapping windows with padding if needed.
     Args:
@@ -77,11 +77,11 @@ def window_partition(x, window_size):
     windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
     return windows, (Hp, Wp)
 
-def window_unpartition(windows, window_size, pad_hw, hw):
+def window_unpartition(windows: Tensor, window_size: int, pad_hw: tuple, hw: tuple):
     """
     Window unpartition into original sequences and removing padding.
     Args:
-        x (tensor): input tokens with [B * num_windows, window_size, window_size, C].
+        windows (tensor): input tokens with [B * num_windows, window_size, window_size, C].
         window_size (int): window size.
         pad_hw (Tuple): padded height and width (Hp, Wp).
         hw (Tuple): original height and width (H, W) before padding.
@@ -99,7 +99,7 @@ def window_unpartition(windows, window_size, pad_hw, hw):
         x = x[:, :H, :W, :].contiguous()
     return x
 
-def get_rel_pos(q_size, k_size, rel_pos):
+def get_rel_pos(q_size: int, k_size: int, rel_pos: Tensor):
     """
     Get relative positional embeddings according to the relative positions of
         query and key sizes.
@@ -131,7 +131,7 @@ def get_rel_pos(q_size, k_size, rel_pos):
 
     return rel_pos_resized[relative_coords.long()]
 
-def add_decomposed_rel_pos(attn, q, rel_pos_h, rel_pos_w, q_size, k_size):
+def add_decomposed_rel_pos(attn: Tensor, q: Tensor, rel_pos_h: Tensor, rel_pos_w: Tensor, q_size: tuple, k_size: tuple):
     """
     Calculate decomposed Relative Positional Embeddings from :paper:`mvitv2`.
     https://github.com/facebookresearch/mvit/blob/19786631e330df9f3622e5402b4a419a263a2c80/mvit/models/attention.py   # noqa B950
@@ -226,7 +226,7 @@ class SABlock(nn.Module): ###!!! Not checked
                 nn.init.trunc_normal_(self.rel_pos_h, std=0.02)
                 nn.init.trunc_normal_(self.rel_pos_w, std=0.02)'''
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         """
 
         Args:
@@ -313,7 +313,7 @@ class TransformerBlock(nn.Module): ###!!! Not checked
         self.input_size = input_size
         self.hidden_size = hidden_size
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         """forward
 
         Args:
@@ -362,9 +362,9 @@ class ViTDet(nn.Module): ###!!! Not checked
         window_size: int = 0,
         window_block_indexes: list = [],
         use_rel_pos: bool = False,
-        rel_pos_zero_init=True,
+        rel_pos_zero_init: bool = True,
         pretrain_img_size: int = 224,
-        out_feature="last_feat",
+        out_feature: str ="last_feat",
         ):
         """
         Args:
@@ -461,7 +461,7 @@ class ViTDet(nn.Module): ###!!! Not checked
             else:
                 self.classification_head = nn.Linear(hidden_size, num_classes)  # type: ignore
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> tuple[dict[str, Tensor],Sequence[Tensor]]:
         """forward
 
         Args:
@@ -509,13 +509,13 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
     """
     def __init__(
         self,
-        input_shapes,
-        in_feature,
-        out_channels,
-        scale_factors,
-        top_block=None,
-        square_pad=0,
-        spatial_dims=2,
+        input_shapes: Sequence[int],
+        in_feature: str,
+        out_channels: int,
+        scale_factors: Sequence[float],
+        top_block: nn.Module | None = None,
+        square_pad: int = 0,
+        spatial_dims: int = 2,
     ):
         """
         Args:
@@ -610,7 +610,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             "size_divisiblity": self._size_divisibility,
             "square_size": self._square_pad,
         }
-    def forward(self, x):
+    def forward(self, x: Tensor) -> dict[str, Tensor]:
         """
         Args:
             x: Output of vitdet model (B, H/patch, W/patch, C)
@@ -659,7 +659,7 @@ class LastLevelMaxPool(nn.Module):
         pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[Pool.MAX, spatial_dims]
         self.maxpool = pool_type(kernel_size=1, stride=2, padding=0)
 
-    def forward(self, x):
+    def forward(self, x) -> Tensor:
         return self.maxpool(x)
 
 class BackboneWithFPN_vitdet(nn.Module):
