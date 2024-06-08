@@ -561,7 +561,7 @@ class OBJDetectInference():
                 spatial_dims=model_spatial_dims,
                 qkv_bias=True,
                 drop_path_rate=self.args.dp, #self impl, it is not equal to dropout
-                window_size=self.args.window_szie, #self impl
+                window_size=self.args.window_size, #self impl
                 #act_layer=nn.GELU
                 #norm_layer eps need to change from 1e-5 to 1e-6
                 window_block_indexes=self.args.window_block_indexes, #window_block_indexes self impl

@@ -21,8 +21,8 @@
 	"dp": 0.1,
 	"img_size": 192, 
 	"out_channels": 256,
-	"model_patch_szie": 16, 
-    "window_szie": 14, 
+	"model_patch_size": 16, 
+    "window_size": 14, 
 	"mlp_dim" : 3072,
     "scale_factors": [4.0, 2.0, 1.0],
     "window_block_indexes": [
