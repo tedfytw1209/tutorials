@@ -77,7 +77,7 @@ def window_partition(x: Tensor, window_size: int):
     windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
     return windows, (Hp, Wp)
 
-def window_unpartition(windows: Tensor, window_size: int, pad_hw: tuple, hw: tuple):
+def window_unpartition(windows: Tensor, window_size: int, pad_hw: tuple[int, int], hw: tuple[int, int]):
     """
     Window unpartition into original sequences and removing padding.
     Args:
@@ -131,7 +131,7 @@ def get_rel_pos(q_size: int, k_size: int, rel_pos: Tensor):
 
     return rel_pos_resized[relative_coords.long()]
 
-def add_decomposed_rel_pos(attn: Tensor, q: Tensor, rel_pos_h: Tensor, rel_pos_w: Tensor, q_size: tuple, k_size: tuple):
+def add_decomposed_rel_pos(attn: Tensor, q: Tensor, rel_pos_h: Tensor, rel_pos_w: Tensor, q_size: tuple[int, int], k_size: tuple[int, int]):
     """
     Calculate decomposed Relative Positional Embeddings from :paper:`mvitv2`.
     https://github.com/facebookresearch/mvit/blob/19786631e330df9f3622e5402b4a419a263a2c80/mvit/models/attention.py   # noqa B950
