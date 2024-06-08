@@ -545,7 +545,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         #_assert_strides_are_log2_contiguous(strides)
 
         dim = input_shapes[in_feature].channels
-        self.stages = []
+        self.stages: list[nn.Sequential] = []
         use_bias = False
         for idx, scale in enumerate(scale_factors):
             out_dim = dim
