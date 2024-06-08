@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import math
 import torch
@@ -25,6 +25,9 @@ from monai.networks.blocks.mlp import MLPBlock
 from monai.utils import optional_import
 from monai.networks.blocks.backbone_fpn_utils import BackboneWithFPN
 from monai.networks.layers.factories import Conv, Pool
+from monai.apps.detection.networks.retinanet_detector import *
+from monai.apps.detection.utils.anchor_utils import AnchorGenerator
+from monai.data.box_utils import box_iou
 
 from dataclasses import dataclass
 from typing import Optional
@@ -877,3 +880,110 @@ def vitdet_fpn_feature_extractor(
         returned_layers=list(returned_layers),
     )
     return feature_extractor
+
+#detector only for testing
+class RetinaNetDetector_debug(RetinaNetDetector):
+    def __init__(
+        self,
+        network: nn.Module,
+        anchor_generator: AnchorGenerator,
+        box_overlap_metric: Callable = box_iou,
+        spatial_dims: int | None = None,  # used only when network.spatial_dims does not exist
+        num_classes: int | None = None,  # used only when network.num_classes does not exist
+        size_divisible: Sequence[int] | int = 1,  # used only when network.size_divisible does not exist
+        cls_key: str = "classification",  # used only when network.cls_key does not exist
+        box_reg_key: str = "box_regression",  # used only when network.box_reg_key does not exist
+        debug: bool = False,
+    ):
+        super().__init__(network,anchor_generator,box_overlap_metric,spatial_dims,num_classes,size_divisible,cls_key,box_reg_key,debug)
+    
+    def forward(
+        self,
+        input_images: list[Tensor] | Tensor,
+        targets: list[dict[str, Tensor]] | None = None,
+        use_inferer: bool = False,
+    ) -> dict[str, Tensor] | list[dict[str, Tensor]]:
+        """
+        Returns a dict of losses during training, or a list predicted dict of boxes and labels during inference.
+
+        Args:
+            input_images: The input to the model is expected to be a list of tensors, each of shape (C, H, W) or  (C, H, W, D),
+                one for each image, and should be in 0-1 range. Different images can have different sizes.
+                Or it can also be a Tensor sized (B, C, H, W) or  (B, C, H, W, D). In this case, all images have same size.
+            targets: a list of dict. Each dict with two keys: self.target_box_key and self.target_label_key,
+                ground-truth boxes present in the image (optional).
+            use_inferer: whether to use self.inferer, a sliding window inferer, to do the inference.
+                If False, will simply forward the network.
+                If True, will use self.inferer, and requires
+                ``self.set_sliding_window_inferer(*args)`` to have been called before.
+
+        Return:
+            If training mode, will return a dict with at least two keys,
+            including self.cls_key and self.box_reg_key, representing classification loss and box regression loss.
+
+            If evaluation mode, will return a list of detection results.
+            Each element corresponds to an images in ``input_images``, is a dict with at least three keys,
+            including self.target_box_key, self.target_label_key, self.pred_score_key,
+            representing predicted boxes, classification labels, and classification scores.
+
+        """
+        # 1. Check if input arguments are valid
+        if self.training:
+            targets = check_training_targets(
+                input_images, targets, self.spatial_dims, self.target_label_key, self.target_box_key
+            )
+            self._check_detector_training_components()
+
+        # 2. Pad list of images to a single Tensor `images` with spatial size divisible by self.size_divisible.
+        # image_sizes stores the original spatial_size of each image before padding.
+        images, image_sizes = preprocess_images(input_images, self.spatial_dims, self.size_divisible)
+
+        # 3. Generate network outputs. Use inferer only in evaluation mode.
+        if self.training or (not use_inferer):
+            head_outputs = self.network(images)
+            if isinstance(head_outputs, (tuple, list)):
+                tmp_dict = {}
+                tmp_dict[self.cls_key] = head_outputs[: len(head_outputs) // 2]
+                tmp_dict[self.box_reg_key] = head_outputs[len(head_outputs) // 2 :]
+                head_outputs = tmp_dict
+            else:
+                # ensure head_outputs is Dict[str, List[Tensor]]
+                ensure_dict_value_to_list_(head_outputs)
+        else:
+            if self.inferer is None:
+                raise ValueError(
+                    "`self.inferer` is not defined." "Please refer to function self.set_sliding_window_inferer(*)."
+                )
+            head_outputs = predict_with_inferer(
+                images, self.network, keys=[self.cls_key, self.box_reg_key], inferer=self.inferer
+            )
+        print('self.cls_key:')
+        for t in head_outputs[self.cls_key]:
+            print('Shape: ', t.shape)
+        print('self.box_reg_key:')
+        for t in head_outputs[self.box_reg_key]:
+            print('Shape: ', t.shape)
+
+        # 4. Generate anchors and store it in self.anchors: List[Tensor]
+        self.generate_anchors(images, head_outputs)
+        # num_anchor_locs_per_level: List[int], list of HW or HWD for each level
+        num_anchor_locs_per_level = [x.shape[2:].numel() for x in head_outputs[self.cls_key]]
+
+        # 5. Reshape and concatenate head_outputs values from List[Tensor] to Tensor
+        # head_outputs, originally being Dict[str, List[Tensor]], will be reshaped to Dict[str, Tensor]
+        for key in [self.cls_key, self.box_reg_key]:
+            # reshape to Tensor sized(B, sum(HWA), self.num_classes) for self.cls_key
+            # or (B, sum(HWA), 2* self.spatial_dims) for self.box_reg_key
+            # A = self.num_anchors_per_loc
+            head_outputs[key] = self._reshape_maps(head_outputs[key])
+
+        # 6(1). If during training, return losses
+        if self.training:
+            losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore
+            return losses
+
+        # 6(2). If during inference, return detection results
+        detections = self.postprocess_detections(
+            head_outputs, self.anchors, image_sizes, num_anchor_locs_per_level  # type: ignore
+        )
+        return detections

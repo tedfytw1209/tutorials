@@ -37,7 +37,7 @@ from warmup_scheduler import GradualWarmupScheduler
 import monai
 from monai.apps.detection.metrics.coco import COCOMetric
 from monai.apps.detection.metrics.matching import matching_batch
-from monai.apps.detection.networks.retinanet_detector import RetinaNetDetector
+#from monai.apps.detection.networks.retinanet_detector import RetinaNetDetector
 from monai.apps.detection.networks.retinanet_network import (
     RetinaNet,
     resnet_fpn_feature_extractor,
@@ -49,7 +49,7 @@ from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
-from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet
+from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RetinaNetDetector_debug
 from network.vitdet import vitdet_fpn_feature_extractor
 
 class OBJDetectInference():
@@ -616,7 +616,7 @@ class OBJDetectInference():
     
     #retinanet
     def build_retinanet_detector(self,net,anchor_generator,device,train=True,valid=True):
-        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
+        detector = RetinaNetDetector_debug(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
         #!!! need consider image mean and std
         # set training components
         if train:
