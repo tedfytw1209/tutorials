@@ -752,13 +752,21 @@ class BackboneWithFPN_vitdet(nn.Module):
             feature maps after FPN layers. They are ordered from highest resolution first.
         """
         #change size if spatial_dim==2 and last dim==1
+        print('BackboneWithFPN_vitdet Input Features Shape: ', x.shape)
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
         features: dict[str, Tensor] = self.body(x)  # backbone
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used, !!!need check
-            return {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
-        return y
+            out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
+            print('BackboneWithFPN_vitdet Output Features Shape: ')
+            for k,v in out_dict.items():
+                print("Feature names: ", k, "=> shape:", v.shape)
+        else:
+            out_dict = y
+        
+        return out_dict
+        
 
 #!!! need change
 def _vit_fpn_extractor(
