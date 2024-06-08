@@ -489,7 +489,7 @@ class ViTDet(nn.Module): ###!!! Not checked
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
         # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
-        x = x.transpose(-1,-2).view(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
+        x = x.transpose(-1,-2).reshape(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
         print('Vitdet Output Shape: ', x.shape)
         return {self._out_features[0]:x}
     
@@ -638,6 +638,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         #bottom_up_features = self.net(x)
         bottom_up_features = x
         features = bottom_up_features[self.in_feature]
+        print('SimpleFeaturePyramid Input Shape: ', features.shape)
         results: list[Tensor] = []
 
         for stage in self.stages:
@@ -651,7 +652,11 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                 top_block_in_feature = results[self._out_features.index(self.top_block.in_feature)]
             results.append(self.top_block(top_block_in_feature))
         assert len(self._out_features) == len(results)
-        return {f: res for f, res in zip(self._out_features, results)}
+        out_dict: dict[str, Tensor] = {f: res for f, res in zip(self._out_features, results)}
+        print('SimpleFeaturePyramid Output Features Shape: ')
+        for k,v in out_dict.items():
+            print("Feature names: ", k, "=> shape:", v.shape)
+        return out_dict
     
 class LastLevelMaxPool(nn.Module):
     """
