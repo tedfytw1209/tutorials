@@ -35,7 +35,7 @@ from monai.apps.detection.networks.retinanet_network import (
     RetinaNet,
     resnet_fpn_feature_extractor,
 )
-from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape
+from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape,AnchorGenerator
 from monai.data import DataLoader, Dataset, box_utils, load_decathlon_datalist
 from monai.data.utils import no_collation
 from monai.networks.nets import resnet

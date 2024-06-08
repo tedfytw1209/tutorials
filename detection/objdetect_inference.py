@@ -42,7 +42,7 @@ from monai.apps.detection.networks.retinanet_network import (
     RetinaNet,
     resnet_fpn_feature_extractor,
 )
-from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape
+from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape,AnchorGenerator
 from monai.data import DataLoader, Dataset, box_utils, load_decathlon_datalist
 from monai.data.utils import no_collation
 from monai.networks.nets import resnet
@@ -505,15 +505,15 @@ class OBJDetectInference():
         with open(self.args.result_list_file_path, "w") as outfile:
             json.dump(test_metric_dict, outfile, indent=4)
     #build Network
-    def build_net(self,*args: Any, **kwargs: Any):
+    def build_net(self,anchor_generator: AnchorGenerator):
         if self.model_name=='retinanet':
-            return self.build_retinanet(*args, **kwargs)
+            return self.build_retinanet(anchor_generator)
         elif self.model_name=='vitdet':
-            return self.build_vitdet(*args, **kwargs)
+            return self.build_vitdet(anchor_generator)
         else:
             raise ValueError("Could not find correct backbone model name (self.model_name=%s) , please specify it."%(self.model_name))
     #retina net
-    def build_retinanet(self,anchor_generator, *args, **kwargs):
+    def build_retinanet(self,anchor_generator: AnchorGenerator):
         #tmp code
         conv1_t_size = [max(7, 2 * s + 1) for s in self.args.conv1_t_stride]
         backbone = resnet.ResNet(
@@ -544,7 +544,7 @@ class OBJDetectInference():
         )
         return net
     #vitdet
-    def build_vitdet(self, anchor_generator, *args, **kwargs):
+    def build_vitdet(self, anchor_generator: AnchorGenerator):
         # Parameter settings are in config.json file
         if hasattr(self.args,"model_spatial_dims"):
             model_spatial_dims = self.args.model_spatial_dims
