@@ -176,9 +176,9 @@ class SABlock(nn.Module): ###!!! Not checked
         qkv_bias: bool = False,
         save_attn: bool = False,
         dim_head: int | None = None,
-        use_rel_pos=False,
-        rel_pos_zero_init=True,
-        input_size=None,
+        use_rel_pos: bool =False,
+        rel_pos_zero_init: bool =True,
+        input_size: Sequence[int] | int | None = None,
     ) -> None:
         """
         Args:
@@ -275,7 +275,7 @@ class TransformerBlock(nn.Module): ###!!! Not checked
         window_size: int = 0,
         use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
-        input_size: int = None,
+        input_size: Sequence[int] | int | None = None,
     ) -> None:
         """
         Args:
@@ -418,7 +418,7 @@ class ViTDet(nn.Module): ###!!! Not checked
             assert len(img_size) == spatial_dims
             img_size_val = img_size[0]
             img_shape = img_size
-        patched_input_shape = [img/patch for img,patch in zip(img_shape,patch_shape)]
+        patched_input_shape = [int(img/patch) for img,patch in zip(img_shape,patch_shape)]
         self.patched_input_shape = patched_input_shape
         # stochastic depth decay rule
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, num_layers)]
