@@ -474,19 +474,23 @@ class ViTDet(nn.Module): ###!!! Not checked
             or feature maps (B, C, H/patch, W/patch, D) or (B, C, H/patch, W/patch)}
         """
         #PatchEmbeddingBlock Input: (B, C, H, W, D), Output: (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)
+        print('Vitdet Input Shape: ', x.shape)
         x = self.patch_embedding(x)
+        print('Vitdet Embed Shape: ', x.shape)
         if hasattr(self, "cls_token"):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
             x = torch.cat((cls_token, x), dim=1)
-        hidden_states_out = []
+        #hidden_states_out = []
         for blk in self.blocks:
             x = blk(x)
-            hidden_states_out.append(x)
+            #hidden_states_out.append(x)
+        print('Vitdet After Blocks Shape: ', x.shape)
         x = self.norm(x)
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
         # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
         x = x.transpose(-1,-2).view(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
+        print('Vitdet Output Shape: ', x.shape)
         return {self._out_features[0]:x}
     
     def output_shape(self):
