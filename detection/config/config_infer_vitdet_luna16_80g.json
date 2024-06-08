@@ -24,7 +24,7 @@
 	"model_patch_size": 16, 
     "window_size": 14, 
 	"mlp_dim" : 3072,
-    "scale_factors": [4.0, 2.0, 1.0],
+    "scale_factors": [16.0, 8.0, 4.0],
     "window_block_indexes": [
                 0,
                 1,

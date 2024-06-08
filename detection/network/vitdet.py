@@ -575,7 +575,32 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         use_bias = False
         for idx, scale in enumerate(scale_factors):
             out_dim = dim
-            if scale == 4.0:
+            if scale == 16.0:
+                layers = [
+                    nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
+                    LayerNorm(dim // 2,eps=1e-6), #!!! detectron2 use 1e-6
+                    nn.GELU(),
+                    nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
+                    LayerNorm(dim // 4,eps=1e-6), #!!! detectron2 use 1e-6
+                    nn.GELU(),
+                    nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
+                    LayerNorm(dim // 8,eps=1e-6), #!!! detectron2 use 1e-6
+                    nn.GELU(),
+                    nn.ConvTranspose2d(dim // 8, dim // 16, kernel_size=2, stride=2),
+                ]
+                out_dim = dim // 16
+            elif scale == 8.0:
+                layers = [
+                    nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
+                    LayerNorm(dim // 2,eps=1e-6), #!!! detectron2 use 1e-6
+                    nn.GELU(),
+                    nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
+                    LayerNorm(dim // 4,eps=1e-6), #!!! detectron2 use 1e-6
+                    nn.GELU(),
+                    nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
+                ]
+                out_dim = dim // 8
+            elif scale == 4.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
                     LayerNorm(dim // 2,eps=1e-6), #!!! detectron2 use 1e-6
