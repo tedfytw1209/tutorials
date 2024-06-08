@@ -572,7 +572,7 @@ class OBJDetectInference():
                 out_feature="feat", #name of the last feature, no need
                 )
         
-        net = SimpleFeaturePyramid(
+        fpn_net = SimpleFeaturePyramid(
             input_shapes=backbone.output_shape(),
             in_feature="feat", #need same as ViTdet output feature
             out_channels=self.args.out_channels,
@@ -583,7 +583,8 @@ class OBJDetectInference():
             )
         #a warper for later use
         feature_extractor = vitdet_fpn_feature_extractor(
-            backbone=net,
+            backbone=backbone,
+            fpn=fpn_net,
             spatial_dims=self.args.spatial_dims,
             pretrained_backbone=False,
             trainable_backbone_layers=None,
