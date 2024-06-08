@@ -24,8 +24,8 @@ from monai.transforms import (
     RandRotated,
     RandScaleIntensityd,
     RandShiftIntensityd,
-    Identity,
-    SqueezeDim,
+    Identityd,
+    SqueezeDimd,
 )
 from monai.apps.detection.transforms.dictionary import (
     AffineBoxToImageCoordinated,
@@ -81,9 +81,9 @@ def generate_detection_train_transform(
         compute_dtype = torch.float32
     
     if spatial_dims==3:
-        add_transform = Identity()
+        add_transform = Identityd(keys=[image_key, box_key, label_key])
     elif spatial_dims==2:
-        add_transform = SqueezeDim(dim=-1)
+        add_transform = SqueezeDimd(dim=-1)
     
 
     train_transforms = Compose(
@@ -238,9 +238,9 @@ def generate_detection_val_transform(
         compute_dtype = torch.float32
     
     if spatial_dims==3:
-        add_transform = Identity()
+        add_transform = Identityd(keys=[image_key, box_key, label_key])
     elif spatial_dims==2:
-        add_transform = SqueezeDim(dim=-1)
+        add_transform = SqueezeDimd(keys=[image_key, box_key],dim=-1)
     
     if patch_size and spatial_dims==2:
         crop_transform = RandCropBoxByPosNegLabeld(
@@ -254,7 +254,7 @@ def generate_detection_val_transform(
                 neg=1,
             )
     else:
-        crop_transform = Identity()
+        crop_transform = Identityd(keys=[image_key, box_key, label_key])
 
     val_transforms = Compose(
         [
