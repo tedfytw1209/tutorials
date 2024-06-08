@@ -645,7 +645,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                 top_block_in_feature = bottom_up_features[self.top_block.in_feature]
             else:
                 top_block_in_feature = results[self._out_features.index(self.top_block.in_feature)]
-            results.extend(self.top_block(top_block_in_feature))
+            results.append(self.top_block(top_block_in_feature))
         assert len(self._out_features) == len(results)
         return {f: res for f, res in zip(self._out_features, results)}
     
@@ -662,7 +662,7 @@ class LastLevelMaxPool(nn.Module):
         pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[Pool.MAX, spatial_dims]
         self.maxpool = pool_type(kernel_size=1, stride=2, padding=0)
 
-    def forward(self, x) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return self.maxpool(x)
 
 class BackboneWithFPN_vitdet(nn.Module):
