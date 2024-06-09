@@ -29,8 +29,11 @@ from torch.nn.utils.clip_grad import clip_grad_norm
 from generate_transforms import (
     generate_detection_train_transform,
     generate_detection_val_transform,
-    generate_detection_inference_transform
+    generate_detection_inference_transform,
+    generate_detection_train_transform_2d,
+    generate_detection_val_transform_2d
 )
+
 from torch.utils.tensorboard import SummaryWriter
 from visualize_image import visualize_one_xy_slice_in_3d_image
 from warmup_scheduler import GradualWarmupScheduler
@@ -101,7 +104,16 @@ class OBJDetectInference():
             b_max=1.0,
             clip=True,
         )
-        train_transforms = generate_detection_train_transform(
+        if class_args.spatial_dims==3:
+            train_transforms_func = generate_detection_train_transform
+            val_transforms_func = generate_detection_val_transform
+        elif class_args.spatial_dims==2:
+            train_transforms_func = generate_detection_train_transform_2d
+            val_transforms_func = generate_detection_val_transform_2d
+        else:
+            raise('Error: no transform for spatial_dims==', class_args.spatial_dims)
+        
+        train_transforms = train_transforms_func(
             "image",
             "box",
             "label",
@@ -111,9 +123,8 @@ class OBJDetectInference():
             class_args.batch_size,
             affine_lps_to_ras=True,
             amp=amp,
-            spatial_dims=class_args.spatial_dims,
         )
-        val_transforms = generate_detection_val_transform(
+        val_transforms = val_transforms_func(
             "image",
             "box",
             "label",
@@ -121,11 +132,9 @@ class OBJDetectInference():
             intensity_transform,
             affine_lps_to_ras=True,
             amp=amp,
-            spatial_dims=class_args.spatial_dims,
-            patch_size=config_dict.get('val_data_size',None),
         )
         # !!change to val transform
-        inference_transforms = generate_detection_val_transform(
+        inference_transforms = val_transforms_func(
             "image",
             "box",
             "label",
@@ -133,8 +142,6 @@ class OBJDetectInference():
             intensity_transform,
             affine_lps_to_ras=True,
             amp=amp,
-            spatial_dims=class_args.spatial_dims,
-            patch_size=config_dict.get('val_data_size',None),
         )
         # 2. prepare training data
         self.make_datasets(class_args,train_transforms,val_transforms,inference_transforms)

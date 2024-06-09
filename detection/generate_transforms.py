@@ -11,6 +11,10 @@
 
 import torch
 import numpy as np
+from collections.abc import Callable, Hashable, Mapping, Sequence
+
+from monai.config import IndexSelection, KeysCollection, SequenceStr
+from monai.transforms.transform import LazyTransform, MapTransform, Randomizable
 from monai.transforms import (
     Compose,
     DeleteItemsd,
@@ -53,7 +57,6 @@ def generate_detection_train_transform(
     batch_size,
     affine_lps_to_ras=False,
     amp=True,
-    spatial_dims=3,
 ):
     """
     Generate training transform for detection.
@@ -70,7 +73,6 @@ def generate_detection_train_transform(
         affine_lps_to_ras: Usually False.
             Set True only when the original images were read by itkreader with affine_lps_to_ras=True
         amp: whether to use half precision
-        spatial_dims: dim of image(default 3), need SqueezeDim in spatial_dims=2.
 
     Return:
         training transform for detection
@@ -79,12 +81,6 @@ def generate_detection_train_transform(
         compute_dtype = torch.float16
     else:
         compute_dtype = torch.float32
-    
-    if spatial_dims==3:
-        add_transform = Identityd(keys=[image_key, box_key, label_key])
-    elif spatial_dims==2:
-        add_transform = SqueezeDimd(keys=[image_key],dim=-1)
-    
 
     train_transforms = Compose(
         [
@@ -113,8 +109,6 @@ def generate_detection_train_transform(
                 pos=1,
                 neg=1,
             ),
-            ### !!! add function to delete last dim if dim==1
-            add_transform,
             RandZoomBoxd(
                 image_keys=[image_key],
                 box_keys=[box_key],
@@ -211,8 +205,6 @@ def generate_detection_val_transform(
     intensity_transform,
     affine_lps_to_ras=False,
     amp=True,
-    spatial_dims=3,
-    patch_size=None,
 ):
     """
     Generate validation transform for detection.
@@ -227,8 +219,6 @@ def generate_detection_val_transform(
         affine_lps_to_ras: Usually False.
             Set True only when the original images were read by itkreader with affine_lps_to_ras=True
         amp: whether to use half precision
-        spatial_dims: dim of image(default 3), need SqueezeDim in spatial_dims=2.
-        patch_size: patch_size to crop image to 2d
     Return:
         validation transform for detection
     """
@@ -236,25 +226,6 @@ def generate_detection_val_transform(
         compute_dtype = torch.float16
     else:
         compute_dtype = torch.float32
-    
-    if spatial_dims==3:
-        add_transform = Identityd(keys=[image_key, box_key, label_key])
-    elif spatial_dims==2:
-        add_transform = SqueezeDimd(keys=[image_key],dim=-1)
-    
-    if patch_size and spatial_dims==2:
-        crop_transform = RandCropBoxByPosNegLabeld(
-                image_keys=[image_key],
-                box_keys=box_key,
-                label_keys=label_key,
-                spatial_size=patch_size,
-                whole_box=True,
-                num_samples=1,
-                pos=1,
-                neg=1,
-            )
-    else:
-        crop_transform = Identityd(keys=[image_key, box_key, label_key])
 
     val_transforms = Compose(
         [
@@ -271,9 +242,7 @@ def generate_detection_val_transform(
                 box_ref_image_keys=image_key,
                 image_meta_key_postfix="meta_dict",
                 affine_lps_to_ras=affine_lps_to_ras,
-            ), #add for convert to 2d
-            crop_transform,
-            add_transform,
+            ),
             EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
             EnsureTyped(keys=label_key, dtype=torch.long),
         ]
@@ -351,4 +320,214 @@ def generate_detection_inference_transform(
     )
     return test_transforms, post_transforms
 
-#2D version
+### 2D version
+class SelectTo2D(MapTransform):
+    """
+    Dictionary-based wrapper that select 2D slice from 3d imagse.
+
+    This transform is capable of lazy execution. See the :ref:`Lazy Resampling topic<lazy_resampling>`
+    for more information.
+
+    Args:
+        keys: keys of the corresponding items to be transformed.
+            See also: :py:class:`monai.transforms.compose.MapTransform`
+        box_keys: box keys.
+        allow_missing_keys: don't raise exception if key is missing.
+    """
+
+    def __init__(self, image_keys: KeysCollection,box_keys: str, allow_missing_keys: bool = False):
+        self.image_keys = image_keys
+        MapTransform.__init__(self, image_keys, allow_missing_keys)
+        self.box_keys = box_keys
+
+    def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
+        d = dict(data)
+        print('Trans SelectTo2D Input:')
+        for k,v in d.items():
+            print(k, ": shape=", v.shape)
+            print('value=',v)
+        ### !!! select the first image in z domain and change shape
+        image_key = self.image_keys[0]
+        tmp = d[image_key]
+        tmp = tmp[:,:,:,:,0].squeeze(dim=-1)
+        d[image_key] = tmp
+            
+        ### create new box value
+        tmp_box = d[self.box_keys]
+        tmp_box = tmp_box[:,:4]
+        d[self.box_keys] = tmp_box
+        
+        print('Trans SelectTo2D Output:')
+        for k,v in d.items():
+            print(k, ": shape=", v.shape)
+            print('value=',v)
+        
+        return d
+
+def generate_detection_train_transform_2d(
+    image_key,
+    box_key,
+    label_key,
+    gt_box_mode,
+    intensity_transform,
+    patch_size,
+    batch_size,
+    affine_lps_to_ras=False,
+    amp=True,
+):
+    """
+    Generate training transform for detection. (2D version)
+    """
+    if amp:
+        compute_dtype = torch.float16
+    else:
+        compute_dtype = torch.float32
+    
+    spatial_dims=2
+    
+
+    train_transforms = Compose(
+        [
+            LoadImaged(keys=[image_key], image_only=False, meta_key_postfix="meta_dict"),
+            EnsureChannelFirstd(keys=[image_key]),
+            EnsureTyped(keys=[image_key, box_key], dtype=torch.float32),
+            EnsureTyped(keys=[label_key], dtype=torch.long),
+            #change
+            SelectTo2D(image_keys=[image_key], box_keys=box_key),
+            StandardizeEmptyBoxd(box_keys=[box_key], box_ref_image_keys=image_key),
+            Orientationd(keys=[image_key], axcodes="RAS"),
+            intensity_transform,
+            EnsureTyped(keys=[image_key], dtype=torch.float16),
+            ConvertBoxToStandardModed(box_keys=[box_key], mode=gt_box_mode),
+            AffineBoxToImageCoordinated(
+                box_keys=[box_key],
+                box_ref_image_keys=image_key,
+                image_meta_key_postfix="meta_dict",
+                affine_lps_to_ras=affine_lps_to_ras,
+            ),
+            RandCropBoxByPosNegLabeld(
+                image_keys=[image_key],
+                box_keys=box_key,
+                label_keys=label_key,
+                spatial_size=patch_size,
+                whole_box=True,
+                num_samples=batch_size,
+                pos=1,
+                neg=1,
+            ),
+            RandZoomBoxd(
+                image_keys=[image_key],
+                box_keys=[box_key],
+                box_ref_image_keys=[image_key],
+                prob=0.2,
+                min_zoom=0.7,
+                max_zoom=1.4,
+                padding_mode="constant",
+                keep_size=True,
+            ),
+            ClipBoxToImaged(
+                box_keys=box_key,
+                label_keys=[label_key],
+                box_ref_image_keys=image_key,
+                remove_empty=True,
+            ),
+            RandFlipBoxd(
+                image_keys=[image_key],
+                box_keys=[box_key],
+                box_ref_image_keys=[image_key],
+                prob=0.5,
+                spatial_axis=0,
+            ),
+            RandFlipBoxd(
+                image_keys=[image_key],
+                box_keys=[box_key],
+                box_ref_image_keys=[image_key],
+                prob=0.5,
+                spatial_axis=1,
+            ),
+            RandRotateBox90d(
+                image_keys=[image_key],
+                box_keys=[box_key],
+                box_ref_image_keys=[image_key],
+                prob=0.75,
+                max_k=3,
+                spatial_axes=(0, 1),
+            ),
+            BoxToMaskd(
+                box_keys=[box_key],
+                label_keys=[label_key],
+                box_mask_keys=["box_mask"],
+                box_ref_image_keys=image_key,
+                min_fg_label=0,
+                ellipse_mask=True,
+            ),
+            RandRotated(
+                keys=[image_key, "box_mask"],
+                mode=["nearest", "nearest"],
+                prob=0.2,
+                range_x=np.pi / 6,
+                keep_size=True,
+                padding_mode="zeros",
+            ),
+            MaskToBoxd(
+                box_keys=[box_key],
+                label_keys=[label_key],
+                box_mask_keys=["box_mask"],
+                min_fg_label=0,
+            ),
+            DeleteItemsd(keys=["box_mask"]),
+            RandGaussianNoised(keys=[image_key], prob=0.1, mean=0, std=0.1),
+            RandGaussianSmoothd(
+                keys=[image_key],
+                prob=0.1,
+                sigma_x=(0.5, 1.0),
+                sigma_y=(0.5, 1.0),
+            ),
+            RandScaleIntensityd(keys=[image_key], prob=0.15, factors=0.25),
+            RandShiftIntensityd(keys=[image_key], prob=0.15, offsets=0.1),
+            RandAdjustContrastd(keys=[image_key], prob=0.3, gamma=(0.7, 1.5)),
+            EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
+            EnsureTyped(keys=[label_key], dtype=torch.long),
+        ]
+    )
+    return train_transforms
+
+def generate_detection_val_transform_2d(
+    image_key,
+    box_key,
+    label_key,
+    gt_box_mode,
+    intensity_transform,
+    affine_lps_to_ras=False,
+    amp=True,
+):
+    """
+    Generate validation transform for detection. (2D version)
+    """
+    if amp:
+        compute_dtype = torch.float16
+    else:
+        compute_dtype = torch.float32
+
+    val_transforms = Compose(
+        [
+            LoadImaged(keys=[image_key], image_only=False, meta_key_postfix="meta_dict"),
+            EnsureChannelFirstd(keys=[image_key]),
+            EnsureTyped(keys=[image_key, box_key], dtype=torch.float32),
+            EnsureTyped(keys=[label_key], dtype=torch.long),
+            SelectTo2D(image_keys=[image_key], box_keys=box_key),
+            StandardizeEmptyBoxd(box_keys=[box_key], box_ref_image_keys=image_key),
+            Orientationd(keys=[image_key], axcodes="RAS"),
+            intensity_transform,
+            ConvertBoxToStandardModed(box_keys=[box_key], mode=gt_box_mode),
+            AffineBoxToImageCoordinated(
+                box_keys=[box_key],
+                box_ref_image_keys=image_key,
+                image_meta_key_postfix="meta_dict",
+                affine_lps_to_ras=affine_lps_to_ras,
+            ),
+            EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
+            EnsureTyped(keys=label_key, dtype=torch.long),
+        ]
+    )
+    return val_transforms

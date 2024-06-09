@@ -12,10 +12,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from collections import OrderedDict
 
 import math
 import torch
 from torch import Tensor, nn
+from torch.nn import init
 import torch.nn.functional as F
 
 from timm.models.layers import DropPath
@@ -24,6 +26,7 @@ from monai.networks.blocks.patchembedding import PatchEmbeddingBlock
 from monai.networks.blocks.mlp import MLPBlock
 from monai.utils import optional_import
 from monai.networks.blocks.backbone_fpn_utils import BackboneWithFPN
+from monai.networks.nets import ViT
 from monai.networks.layers.factories import Conv, Pool
 from monai.apps.detection.networks.retinanet_detector import *
 from monai.apps.detection.utils.anchor_utils import AnchorGenerator
@@ -175,8 +178,8 @@ class LayerNorm(nn.Module):
 
     def __init__(self, normalized_shape: int, eps: float=1e-6):
         super().__init__()
-        self.weight = nn.Parameter(torch.ones(normalized_shape))
-        self.bias = nn.Parameter(torch.zeros(normalized_shape))
+        self.weight = nn.Parameter(torch.empty(normalized_shape))
+        self.bias = nn.Parameter(torch.empty(normalized_shape))
         self.eps = eps
         self.normalized_shape = (normalized_shape,)
 
@@ -190,7 +193,11 @@ class LayerNorm(nn.Module):
         #print('Layer Norm output shape: ', x.shape, 'wieght: ', self.weight.shape, 'bias: ', self.bias.shape)
         return x
 
-class SABlock(nn.Module): ###!!! Not checked
+    def reset_parameters(self) -> None:
+        init.ones_(self.weight)
+        init.zeros_(self.bias)
+
+class SABlock(nn.Module):
     """
     A self-attention block, based on: "Dosovitskiy et al.,
     An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>"
@@ -284,7 +291,7 @@ class SABlock(nn.Module): ###!!! Not checked
         x = self.drop_output(x)
         return x
 
-class TransformerBlock(nn.Module): ###!!! Not checked
+class TransformerBlock(nn.Module):
     """
     A transformer block, based on: "Dosovitskiy et al.,
     An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>"
@@ -369,7 +376,7 @@ class TransformerBlock(nn.Module): ###!!! Not checked
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
 
-class ViTDet(nn.Module): ###!!! Not checked
+class ViTDet(nn.Module):
     def __init__(self,
         in_channels: int,
         img_size: Sequence[int] | int,
@@ -707,7 +714,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                 top_block_in_feature = results[self._out_features.index(self.top_block.in_feature)]
             results.append(self.top_block(top_block_in_feature))
         assert len(self._out_features) == len(results)
-        out_dict: dict[str, Tensor] = {f: res for f, res in zip(self._out_features, results)}
+        out_dict: dict[str, Tensor] = OrderedDict({f: res for f, res in zip(self._out_features, results)})
         return out_dict
     
 class LastLevelMaxPool(nn.Module):
