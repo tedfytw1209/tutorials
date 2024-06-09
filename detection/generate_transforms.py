@@ -341,13 +341,13 @@ class SelectTo2D(MapTransform):
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
-        print('Trans SelectTo2D Input:')
+        '''print('Trans SelectTo2D Input:')
         for k,v in d.items():
-            print(k, ": ", v)
+            print(k, ": ", v)'''
         ### !!! select the first image in z domain and change shape
         image_key = self.image_keys[0]
         tmp = d[image_key]
-        tmp = tmp[:,:,:,:,0].squeeze(dim=-1)
+        tmp = tmp[:,:,:,0].squeeze(dim=-1)
         d[image_key] = tmp
             
         ### create new box value
@@ -355,9 +355,9 @@ class SelectTo2D(MapTransform):
         tmp_box = tmp_box[:,:4]
         d[self.box_keys] = tmp_box
         
-        print('Trans SelectTo2D Output:')
+        '''print('Trans SelectTo2D Output:')
         for k,v in d.items():
-            print(k, ": ", v)
+            print(k, ": ", v)'''
         
         return d
 
