@@ -322,7 +322,7 @@ class OBJDetectInference():
                 print("Inputs sample 0 shape: ",inputs[0].shape)
                 print('Batch targets len: ', len(targets))
                 for k,v in targets[0].items():
-                    print("Targets sample 0 key: ",k,", value shape: ",v.shape)
+                    print("Targets sample 0 key: ",k,", value: ",v)
 
                 for param in detector.network.parameters():
                     param.grad = None
