@@ -993,3 +993,154 @@ class RetinaNetDetector_debug(RetinaNetDetector):
                 head_outputs, self.anchors, image_sizes, num_anchor_locs_per_level  # type: ignore
             )
             return detections
+    #copy only for debug (print step result used)
+    def get_cls_train_sample_per_image(
+        self, cls_logits_per_image: Tensor, targets_per_image: dict[str, Tensor], matched_idxs_per_image: Tensor
+    ) -> tuple[Tensor, Tensor]:
+        """
+        Get samples from one image for classification losses computation.
+
+        Args:
+            cls_logits_per_image: classification logits for one image, (sum(HWA), self.num_classes)
+            targets_per_image: a dict with at least two keys: self.target_box_key and self.target_label_key,
+                ground-truth boxes present in the image.
+            matched_idxs_per_image: matched index, Tensor sized (sum(HWA),) or (sum(HWDA),)
+                Suppose there are M gt boxes. matched_idxs_per_image[i] is a matched gt index in [0, M - 1]
+                or a negative value indicating that anchor i could not be matched.
+                BELOW_LOW_THRESHOLD = -1, BETWEEN_THRESHOLDS = -2
+
+        Return:
+            paired predicted and GT samples from one image for classification losses computation
+        """
+
+        if torch.isnan(cls_logits_per_image).any() or torch.isinf(cls_logits_per_image).any():
+            if torch.is_grad_enabled():
+                print('NaN or Inf in predicted classification logits.')
+                print('cls_logits_per_image shape: ', cls_logits_per_image.shape)
+                print('cls_logits_per_image value: ', cls_logits_per_image)
+                for k,v in targets_per_image.items():
+                    print('targets_per_image k: ',k, v.shape)
+                    print(v)
+                print('matched_idxs_per_image shape: ', matched_idxs_per_image.shape)
+                print('matched_idxs_per_image value: ', matched_idxs_per_image)
+                raise ValueError("NaN or Inf in predicted classification logits.")
+            else:
+                warnings.warn("NaN or Inf in predicted classification logits.")
+
+        foreground_idxs_per_image = matched_idxs_per_image >= 0
+
+        num_foreground = int(foreground_idxs_per_image.sum())
+        num_gt_box = targets_per_image[self.target_box_key].shape[0]
+
+        if self.debug:
+            print(f"Number of positive (matched) anchors: {num_foreground}; Number of GT box: {num_gt_box}.")
+            if num_gt_box > 0 and num_foreground < 2 * num_gt_box:
+                print(
+                    f"Only {num_foreground} anchors are matched with {num_gt_box} GT boxes. "
+                    "Please consider adjusting matcher setting, anchor setting,"
+                    " or the network setting to change zoom scale between network output and input images."
+                )
+
+        # create the target classification with one-hot encoding
+        gt_classes_target = torch.zeros_like(cls_logits_per_image)  # (sum(HW(D)A), self.num_classes)
+        gt_classes_target[
+            foreground_idxs_per_image,  # fg anchor idx in
+            targets_per_image[self.target_label_key][
+                matched_idxs_per_image[foreground_idxs_per_image]
+            ],  # fg class label
+        ] = 1.0
+
+        if self.fg_bg_sampler is None:
+            # if no balanced sampling
+            valid_idxs_per_image = matched_idxs_per_image != self.proposal_matcher.BETWEEN_THRESHOLDS
+        else:
+            # The input of fg_bg_sampler: list of tensors containing -1, 0 or positive values.
+            # Each tensor corresponds to a specific image.
+            # -1 values are ignored, 0 are considered as negatives and > 0 as positives.
+
+            # matched_idxs_per_image (Tensor[int64]): an N tensor where N[i] is a matched gt in
+            # [0, M - 1] or a negative value indicating that prediction i could not
+            # be matched. BELOW_LOW_THRESHOLD = -1, BETWEEN_THRESHOLDS = -2
+            if isinstance(self.fg_bg_sampler, HardNegativeSampler):
+                max_cls_logits_per_image = torch.max(cls_logits_per_image.to(torch.float32), dim=1)[0]
+                sampled_pos_inds_list, sampled_neg_inds_list = self.fg_bg_sampler(
+                    [matched_idxs_per_image + 1], max_cls_logits_per_image
+                )
+            elif isinstance(self.fg_bg_sampler, BalancedPositiveNegativeSampler):
+                sampled_pos_inds_list, sampled_neg_inds_list = self.fg_bg_sampler([matched_idxs_per_image + 1])
+            else:
+                raise NotImplementedError(
+                    "Currently support torchvision BalancedPositiveNegativeSampler and monai HardNegativeSampler matcher. "
+                    "Other types of sampler not supported. "
+                    "Please override self.get_cls_train_sample_per_image(*) for your own sampler."
+                )
+
+            sampled_pos_inds = torch.where(torch.cat(sampled_pos_inds_list, dim=0))[0]
+            sampled_neg_inds = torch.where(torch.cat(sampled_neg_inds_list, dim=0))[0]
+            valid_idxs_per_image = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
+
+        return cls_logits_per_image[valid_idxs_per_image, :], gt_classes_target[valid_idxs_per_image, :]
+
+    def get_box_train_sample_per_image(
+        self,
+        box_regression_per_image: Tensor,
+        targets_per_image: dict[str, Tensor],
+        anchors_per_image: Tensor,
+        matched_idxs_per_image: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        """
+        Get samples from one image for box regression losses computation.
+
+        Args:
+            box_regression_per_image: box regression result for one image, (sum(HWA), 2*self.spatial_dims)
+            targets_per_image: a dict with at least two keys: self.target_box_key and self.target_label_key,
+                ground-truth boxes present in the image.
+            anchors_per_image: anchors of one image,
+                sized (sum(HWA), 2*spatial_dims) or (sum(HWDA), 2*spatial_dims).
+                A = self.num_anchors_per_loc.
+            matched_idxs_per_image: matched index, sized (sum(HWA),) or  (sum(HWDA),)
+
+        Return:
+            paired predicted and GT samples from one image for box regression losses computation
+        """
+
+        if torch.isnan(box_regression_per_image).any() or torch.isinf(box_regression_per_image).any():
+            if torch.is_grad_enabled():
+                print('NaN or Inf in predicted classification logits.')
+                print('cls_logits_per_image shape: ', box_regression_per_image.shape)
+                print('cls_logits_per_image value: ', box_regression_per_image)
+                for k,v in targets_per_image.items():
+                    print('targets_per_image k: ',k, v.shape)
+                    print(v)
+                print('matched_idxs_per_image shape: ', matched_idxs_per_image.shape)
+                print('matched_idxs_per_image value: ', matched_idxs_per_image)
+                raise ValueError("NaN or Inf in predicted box regression.")
+            else:
+                warnings.warn("NaN or Inf in predicted box regression.")
+
+        foreground_idxs_per_image = torch.where(matched_idxs_per_image >= 0)[0]
+        num_gt_box = targets_per_image[self.target_box_key].shape[0]
+
+        # if no GT box, return empty arrays
+        if num_gt_box == 0:
+            return box_regression_per_image[0:0, :], box_regression_per_image[0:0, :]
+
+        # select only the foreground boxes
+        # matched GT boxes for foreground anchors
+        matched_gt_boxes_per_image = targets_per_image[self.target_box_key][
+            matched_idxs_per_image[foreground_idxs_per_image]
+        ].to(box_regression_per_image.device)
+        # predicted box regression for foreground anchors
+        box_regression_per_image = box_regression_per_image[foreground_idxs_per_image, :]
+        # foreground anchors
+        anchors_per_image = anchors_per_image[foreground_idxs_per_image, :]
+
+        # encode GT boxes or decode predicted box regression before computing losses
+        matched_gt_boxes_per_image_ = matched_gt_boxes_per_image
+        box_regression_per_image_ = box_regression_per_image
+        if self.encode_gt:
+            matched_gt_boxes_per_image_ = self.box_coder.encode_single(matched_gt_boxes_per_image_, anchors_per_image)
+        if self.decode_pred:
+            box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
+
+        return box_regression_per_image_, matched_gt_boxes_per_image_
