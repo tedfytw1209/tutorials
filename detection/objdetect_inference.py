@@ -333,14 +333,14 @@ class OBJDetectInference():
                         outputs = detector(inputs, targets)
                         loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     scaler.scale(loss).backward()
-                    torch.nn.utils.clip_grad(net.parameters(), 1.0)
+                    torch.nn.utils.clip_grad(net.parameters(), 1.0) #add grad clip to avoid nan
                     scaler.step(optimizer)
                     scaler.update()
                 else:
                     outputs = detector(inputs, targets)
                     loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     loss.backward()
-                    torch.nn.utils.clip_grad(net.parameters(), 1.0)
+                    torch.nn.utils.clip_grad(net.parameters(), 1.0) #add grad clip to avoid nan
                     optimizer.step()
 
                 # save to tensorboard
