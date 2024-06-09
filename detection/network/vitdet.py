@@ -789,7 +789,7 @@ class BackboneWithFPN_vitdet(nn.Module):
             feature maps after FPN layers. They are ordered from highest resolution first.
         """
         #change size if spatial_dim==2 and last dim==1
-        print('BackboneWithFPN_vitdet Input Features Shape: ', x.shape)
+        #print('BackboneWithFPN_vitdet Input Features Shape: ', x.shape)
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
         features: dict[str, Tensor] = self.body(x)  # backbone
