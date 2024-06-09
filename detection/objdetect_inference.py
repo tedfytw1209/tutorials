@@ -341,14 +341,14 @@ class OBJDetectInference():
                         outputs = detector(inputs, targets)
                         loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     scaler.scale(loss).backward()
-                    clip_grad_norm(detector.network.parameters(), 0.1) #add grad clip to avoid nan
+                    #clip_grad_norm(detector.network.parameters(), 0.1) #add grad clip to avoid nan
                     scaler.step(optimizer)
                     scaler.update()
                 else:
                     outputs = detector(inputs, targets)
                     loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     loss.backward()
-                    clip_grad_norm(detector.network.parameters(), 0.1) #add grad clip to avoid nan
+                    #clip_grad_norm(detector.network.parameters(), 0.1) #add grad clip to avoid nan
                     optimizer.step()
 
                 # save to tensorboard
