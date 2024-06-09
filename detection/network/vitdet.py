@@ -584,13 +584,13 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             if scale == 16.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
-                    LayerNorm(dim // 4,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 4,eps=1e-5), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
-                    LayerNorm(dim // 8,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 8,eps=1e-5), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 8, dim // 16, kernel_size=2, stride=2),
                 ]
@@ -598,10 +598,10 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             elif scale == 8.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
-                    LayerNorm(dim // 4,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 4,eps=1e-5), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
                 ]
@@ -609,7 +609,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             elif scale == 4.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
                 ]
@@ -632,7 +632,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                         kernel_size=1,
                         bias=use_bias,
                     ),
-                    LayerNorm(out_channels,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(out_channels,eps=1e-5), #!!! detectron2 use 1e-6
                     nn.Conv2d(
                         out_channels,
                         out_channels,
@@ -640,7 +640,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                         padding=1,
                         bias=use_bias,
                     ),
-                    LayerNorm(out_channels,eps=1e-6), #!!! detectron2 use 1e-6
+                    LayerNorm(out_channels,eps=1e-5), #!!! detectron2 use 1e-6
                 ]
             )
             layers = nn.Sequential(*layers)
@@ -708,9 +708,6 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             results.append(self.top_block(top_block_in_feature))
         assert len(self._out_features) == len(results)
         out_dict: dict[str, Tensor] = {f: res for f, res in zip(self._out_features, results)}
-        '''print('SimpleFeaturePyramid Output Features Shape: ')
-        for k,v in out_dict.items():
-            print("Feature names: ", k, "=> shape:", v.shape)'''
         return out_dict
     
 class LastLevelMaxPool(nn.Module):
