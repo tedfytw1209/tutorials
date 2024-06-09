@@ -789,12 +789,15 @@ class BackboneWithFPN_vitdet(nn.Module):
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
         features: dict[str, Tensor] = self.body(x)  # backbone
+        print('Vitdet Output Features Shape: ')
+        for k,v in features.items():
+            print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.mean(dim=(1,2,3)))
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used, !!!need check
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
             print('BackboneWithFPN_vitdet Output Features Shape: ')
             for k,v in out_dict.items():
-                print("Feature names: ", k, "=> shape:", v.shape)
+                print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.mean(dim=(1,2,3,4)))
         else:
             out_dict = y
         
