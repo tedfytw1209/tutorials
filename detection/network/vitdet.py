@@ -985,7 +985,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore
             print('Detector Loss:')
             for k,v in head_outputs.items():
-                print(k , ": ", v)
+                print(k , ": ", v.shape)
             return losses
         else:
             # 6(2). If during inference, return detection results
