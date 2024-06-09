@@ -187,7 +187,7 @@ class LayerNorm(nn.Module):
         x = (x - u) / torch.sqrt(s + self.eps)
         print('Layer Norm before wx+b shape: ', x.shape)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
-        print('Layer Norm output shape: ', x.shape)
+        print('Layer Norm output shape: ', x.shape, 'wieght: ', self.weight.shape, 'bias: ', self.bias.shape)
         return x
 
 class SABlock(nn.Module): ###!!! Not checked
