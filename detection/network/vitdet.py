@@ -786,15 +786,15 @@ class BackboneWithFPN_vitdet(nn.Module):
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
         features: dict[str, Tensor] = self.body(x)  # backbone
-        print('Vitdet Output Features Shape: ')
+        '''print('Vitdet Output Features Shape: ')
         for k,v in features.items():
-            print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.sum(dim=(1,2,3)))
+            print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.sum(dim=(1,2,3)))'''
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used, !!!need check
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
-            print('BackboneWithFPN_vitdet Output Features Shape: ')
+            '''print('BackboneWithFPN_vitdet Output Features Shape: ')
             for k,v in out_dict.items():
-                print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.sum(dim=(1,2,3,4)))
+                print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.sum(dim=(1,2,3,4)))'''
         else:
             out_dict = y
         
@@ -967,7 +967,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         self.generate_anchors(images, head_outputs)
         # num_anchor_locs_per_level: List[int], list of HW or HWD for each level
         num_anchor_locs_per_level = [x.shape[2:].numel() for x in head_outputs[self.cls_key]]
-        print('num_anchor_locs_per_level: ', num_anchor_locs_per_level)
+        #print('num_anchor_locs_per_level: ', num_anchor_locs_per_level)
 
         # 5. Reshape and concatenate head_outputs values from List[Tensor] to Tensor
         # head_outputs, originally being Dict[str, List[Tensor]], will be reshaped to Dict[str, Tensor]
@@ -976,16 +976,16 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             # or (B, sum(HWA), 2* self.spatial_dims) for self.box_reg_key
             # A = self.num_anchors_per_loc
             head_outputs[key] = self._reshape_maps(head_outputs[key])
-        print('Detector after reshape:')
+        '''print('Detector after reshape:')
         for k,v in head_outputs.items():
-            print(k , " shape: ", v.shape)
+            print(k , " shape: ", v.shape)'''
 
         # 6(1). If during training, return losses
         if self.training:
             losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore
-            print('Detector Loss:')
+            '''print('Detector Loss:')
             for k,v in head_outputs.items():
-                print(k , ": ", v.shape)
+                print(k , ": ", v.shape)'''
             return losses
         else:
             # 6(2). If during inference, return detection results
