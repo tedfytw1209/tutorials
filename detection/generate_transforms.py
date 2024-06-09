@@ -350,3 +350,5 @@ def generate_detection_inference_transform(
         ]
     )
     return test_transforms, post_transforms
+
+#2D version
