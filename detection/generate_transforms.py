@@ -324,9 +324,8 @@ def generate_detection_inference_transform(
 class SelectTo2D(MapTransform):
     """
     Dictionary-based wrapper that select 2D slice from 3d imagse.
-
-    This transform is capable of lazy execution. See the :ref:`Lazy Resampling topic<lazy_resampling>`
-    for more information.
+    image shape (C, H, W, D) e.g. (1, 540, 540, 247)
+    box shape (N,6), [xmin, xmax, ymin, ymax, zmin, zmax]
 
     Args:
         keys: keys of the corresponding items to be transformed.
@@ -344,8 +343,7 @@ class SelectTo2D(MapTransform):
         d = dict(data)
         print('Trans SelectTo2D Input:')
         for k,v in d.items():
-            print(k, ": shape=", v.shape)
-            print('value=',v)
+            print(k, ": ", v)
         ### !!! select the first image in z domain and change shape
         image_key = self.image_keys[0]
         tmp = d[image_key]
@@ -359,8 +357,7 @@ class SelectTo2D(MapTransform):
         
         print('Trans SelectTo2D Output:')
         for k,v in d.items():
-            print(k, ": shape=", v.shape)
-            print('value=',v)
+            print(k, ": ", v)
         
         return d
 
