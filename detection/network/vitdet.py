@@ -181,13 +181,13 @@ class LayerNorm(nn.Module):
         self.normalized_shape = (normalized_shape,)
 
     def forward(self, x):
-        print('Layer Norm input shape: ', x.shape)
+        #print('Layer Norm input shape: ', x.shape)
         u = x.detach().mean(1, keepdim=True)
         s = (x.detach() - u).pow(2).mean(1, keepdim=True)
         x = (x - u) / torch.sqrt(s + self.eps)
-        print('Layer Norm before wx+b shape: ', x.shape)
+        #print('Layer Norm before wx+b shape: ', x.shape)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
-        print('Layer Norm output shape: ', x.shape, 'wieght: ', self.weight.shape, 'bias: ', self.bias.shape)
+        #print('Layer Norm output shape: ', x.shape, 'wieght: ', self.weight.shape, 'bias: ', self.bias.shape)
         return x
 
 class SABlock(nn.Module): ###!!! Not checked
@@ -502,9 +502,9 @@ class ViTDet(nn.Module): ###!!! Not checked
             or feature maps (B, C, H/patch, W/patch, D) or (B, C, H/patch, W/patch)}
         """
         #PatchEmbeddingBlock Input: (B, C, H, W, D), Output: (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)
-        print('Vitdet Input Shape: ', x.shape)
+        #print('Vitdet Input Shape: ', x.shape)
         x = self.patch_embedding(x)
-        print('Vitdet Embed Shape: ', x.shape)
+        #print('Vitdet Embed Shape: ', x.shape)
         if hasattr(self, "cls_token"):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
             x = torch.cat((cls_token, x), dim=1)
@@ -512,13 +512,13 @@ class ViTDet(nn.Module): ###!!! Not checked
         for blk in self.blocks:
             x = blk(x)
             #hidden_states_out.append(x)
-        print('Vitdet After Blocks Shape: ', x.shape)
+        #print('Vitdet After Blocks Shape: ', x.shape)
         x = self.norm(x)
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
         # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
         x = x.transpose(-1,-2).reshape(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
-        print('Vitdet Output Shape: ', x.shape)
+        #print('Vitdet Output Shape: ', x.shape)
         return {self._out_features[0]:x}
     
     def output_shape(self):
@@ -691,9 +691,9 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         #bottom_up_features = self.net(x)
         bottom_up_features = x
         features = bottom_up_features[self.in_feature]
-        print('SimpleFeaturePyramid Input Shape: ', features.shape)
+        #print('SimpleFeaturePyramid Input Shape: ', features.shape)
         features = features.permute(0,3,1,2)
-        print('SimpleFeaturePyramid After permute Shape: ', features.shape)
+        #print('SimpleFeaturePyramid After permute Shape: ', features.shape)
         results: list[Tensor] = []
 
         for stage in self.stages:
@@ -708,9 +708,9 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             results.append(self.top_block(top_block_in_feature))
         assert len(self._out_features) == len(results)
         out_dict: dict[str, Tensor] = {f: res for f, res in zip(self._out_features, results)}
-        print('SimpleFeaturePyramid Output Features Shape: ')
+        '''print('SimpleFeaturePyramid Output Features Shape: ')
         for k,v in out_dict.items():
-            print("Feature names: ", k, "=> shape:", v.shape)
+            print("Feature names: ", k, "=> shape:", v.shape)'''
         return out_dict
     
 class LastLevelMaxPool(nn.Module):

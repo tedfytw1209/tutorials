@@ -318,12 +318,12 @@ class OBJDetectInference():
                     for batch_data_i in batch_data
                     for batch_data_ii in batch_data_i
                 ]
-                print('Batch inputs len: ', len(inputs))
+                '''print('Batch inputs len: ', len(inputs))
                 print('Batch targets len: ', len(targets))
                 for i in range(len(targets)):
                     print("Inputs ",i," shape: ",inputs[i].shape)
                     for k,v in targets[i].items():
-                        print("Targets ",k,",: ",v)
+                        print("Targets ",k,",: ",v)'''
 
                 for param in detector.network.parameters():
                     param.grad = None
