@@ -181,10 +181,13 @@ class LayerNorm(nn.Module):
         self.normalized_shape = (normalized_shape,)
 
     def forward(self, x):
+        print('Layer Norm input shape: ', x.shape)
         u = x.mean(1, keepdim=True)
         s = (x - u).pow(2).mean(1, keepdim=True)
         x = (x - u) / torch.sqrt(s + self.eps)
+        print('Layer Norm before wx+b shape: ', x.shape)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
+        print('Layer Norm output shape: ', x.shape)
         return x
 
 class SABlock(nn.Module): ###!!! Not checked
@@ -964,6 +967,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         self.generate_anchors(images, head_outputs)
         # num_anchor_locs_per_level: List[int], list of HW or HWD for each level
         num_anchor_locs_per_level = [x.shape[2:].numel() for x in head_outputs[self.cls_key]]
+        print('num_anchor_locs_per_level: ', num_anchor_locs_per_level)
 
         # 5. Reshape and concatenate head_outputs values from List[Tensor] to Tensor
         # head_outputs, originally being Dict[str, List[Tensor]], will be reshaped to Dict[str, Tensor]
@@ -972,14 +976,20 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             # or (B, sum(HWA), 2* self.spatial_dims) for self.box_reg_key
             # A = self.num_anchors_per_loc
             head_outputs[key] = self._reshape_maps(head_outputs[key])
+        print('Detector after reshape:')
+        for k,v in head_outputs.items():
+            print(k , " shape: ", v.shape)
 
         # 6(1). If during training, return losses
         if self.training:
             losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore
+            print('Detector Loss:')
+            for k,v in head_outputs.items():
+                print(k , ": ", v)
             return losses
-
-        # 6(2). If during inference, return detection results
-        detections = self.postprocess_detections(
-            head_outputs, self.anchors, image_sizes, num_anchor_locs_per_level  # type: ignore
-        )
-        return detections
+        else:
+            # 6(2). If during inference, return detection results
+            detections = self.postprocess_detections(
+                head_outputs, self.anchors, image_sizes, num_anchor_locs_per_level  # type: ignore
+            )
+            return detections
