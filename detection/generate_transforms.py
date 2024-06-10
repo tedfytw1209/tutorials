@@ -334,10 +334,12 @@ class SelectTo2D(MapTransform):
         allow_missing_keys: don't raise exception if key is missing.
     """
 
-    def __init__(self, image_keys: KeysCollection,box_keys: str, allow_missing_keys: bool = False):
+    def __init__(self, image_keys: KeysCollection,box_keys: str,image_meta_key_postfix: str="meta_dict", allow_missing_keys: bool = False):
         self.image_keys = image_keys
         MapTransform.__init__(self, image_keys, allow_missing_keys)
         self.box_keys = box_keys
+        box_ref_image_keys = image_keys[0]
+        self.image_meta_key = f"{box_ref_image_keys}_{image_meta_key_postfix}"
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
@@ -354,6 +356,10 @@ class SelectTo2D(MapTransform):
         tmp_box = d[self.box_keys]
         tmp_box = tmp_box[:,:4]
         d[self.box_keys] = tmp_box
+        
+        ### aff change
+        meta_dict = d[self.image_meta_key]
+        affine = meta_dict["affine"]
         
         '''print('Trans SelectTo2D Output:')
         for k,v in d.items():
