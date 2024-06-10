@@ -64,9 +64,9 @@ def print_network_params(params, show_grad=True):
         if show_grad:
             v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
     for i in range(len(v_n)):
-        print('value %s: %.3e ~ %.3e'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item()))
+        print('value %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item(),np.mean(v_v[i]).item()))
         if show_grad:
-            print('grad %s: %.3e ~ %.3e'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item()))
+            print('grad %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item(),np.mean(v_v[i]).item()))
 
 class OBJDetectInference():
     """
@@ -355,7 +355,7 @@ class OBJDetectInference():
                     #with torch.autograd.detect_anomaly(): #for debug
                     scaler.scale(loss).backward()
                     #print_network_params(detector.network.named_parameters())
-                    #clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
+                    clip_grad_norm_(detector.network.parameters(), 5) #add grad clip to avoid nan
                     scaler.step(optimizer)
                     scaler.update()
                 else:
@@ -364,7 +364,7 @@ class OBJDetectInference():
                     #with torch.autograd.detect_anomaly(): #for debug
                     loss.backward()
                     #print_network_params(detector.network.named_parameters())
-                    #clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
+                    clip_grad_norm_(detector.network.parameters(), 5) #add grad clip to avoid nan
                     optimizer.step()
                 
                 # save to tensorboard
