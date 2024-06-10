@@ -187,7 +187,7 @@ class LayerNorm(nn.Module):
         #print('Layer Norm input shape: ', x.shape)
         u = x.detach().mean(1, keepdim=True)
         s = (x.detach() - u).pow(2).mean(1, keepdim=True)
-        x = (x - u) / torch.sqrt(s + self.eps)
+        x = (x - u) / (torch.sqrt(s + self.eps) + self.eps)
         #print('Layer Norm before wx+b shape: ', x.shape)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
         #print('Layer Norm output shape: ', x.shape, 'wieght: ', self.weight.shape, 'bias: ', self.bias.shape)
