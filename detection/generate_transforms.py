@@ -566,7 +566,6 @@ def generate_detection_val_transform_2d(
             EnsureChannelFirstd(keys=[image_key]),
             EnsureTyped(keys=[image_key, box_key], dtype=torch.float32),
             EnsureTyped(keys=[label_key], dtype=torch.long),
-            SelectTo2D(image_keys=[image_key], box_keys=box_key),
             StandardizeEmptyBoxd(box_keys=[box_key], box_ref_image_keys=image_key),
             Orientationd(keys=[image_key], axcodes="RAS"),
             intensity_transform,
@@ -577,6 +576,8 @@ def generate_detection_val_transform_2d(
                 image_meta_key_postfix="meta_dict",
                 affine_lps_to_ras=affine_lps_to_ras,
             ),
+            SelectTo2D(image_keys=[image_key], box_keys=box_key),
+            EmptyBoxdTo2d(box_keys=[box_key], spatial_dims=2),
             EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
             EnsureTyped(keys=label_key, dtype=torch.long),
         ]
