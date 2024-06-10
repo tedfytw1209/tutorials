@@ -575,7 +575,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             square_pad (int): If > 0, require input images to be padded to specific square size.
             spatial_dims (int): default is 2, not implement spatial_dims=3 case now.
         """
-        super(SimpleFeaturePyramid, self).__init__()
+        super().__init__()
 
         self.scale_factors = scale_factors
         self.spatial_dims = spatial_dims
