@@ -373,9 +373,10 @@ class SelectTo2D(MapTransform):
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
-        '''print('Trans SelectTo2D Input:')
-        for k,v in d.items():
-            print(k, ": ", v)'''
+        print('Trans SelectTo2D Input:')
+        for k in [self.image_keys[0],self.box_keys]:
+            v = d[k]
+            print(k, ": shape", v.shape)
         ### !!! select the first image in z domain and change shape
         image_key = self.image_keys[0]
         tmp = d[image_key]
@@ -384,22 +385,23 @@ class SelectTo2D(MapTransform):
             
         ### create new box value
         tmp_box = d[self.box_keys]
-        #tmp_box = torch.index_select(tmp_box, 1, torch.LongTensor([0, 1, 3, 4]))
-        tmp_box = tmp_box[:,:4]
+        tmp_box = torch.index_select(tmp_box, 1, torch.LongTensor([0, 1, 3, 4]))
+        #tmp_box = tmp_box[:,:4]
         d[self.box_keys] = tmp_box
         
         ### aff change
-        meta_dict = d[self.image_meta_key]
+        '''meta_dict = d[self.image_meta_key]
         affine = meta_dict["affine"]
-        print('3D Affine: ',affine.shape,affine)
+        #print('3D Affine: ',affine.shape,affine)
         affine = torch.index_select(torch.index_select(affine, 1, torch.LongTensor([0, 1, 3])),0,torch.LongTensor([0, 1, 3]))
-        print('2D Affine: ',affine.shape,affine)
+        #print('2D Affine: ',affine.shape,affine)
         meta_dict['affine'] = affine
-        d[self.image_meta_key] = meta_dict
+        d[self.image_meta_key] = meta_dict'''
         
-        '''print('Trans SelectTo2D Output:')
-        for k,v in d.items():
-            print(k, ": ", v)'''
+        print('Trans SelectTo2D Output:')
+        for k in [self.image_keys[0],self.box_keys]:
+            v = d[k]
+            print(k, ": shape", v.shape)
         
         return d
 
@@ -431,8 +433,6 @@ def generate_detection_train_transform_2d(
             EnsureChannelFirstd(keys=[image_key]),
             EnsureTyped(keys=[image_key, box_key], dtype=torch.float32),
             EnsureTyped(keys=[label_key], dtype=torch.long),
-            #change
-            SelectTo2D(image_keys=[image_key], box_keys=box_key),
             StandardizeEmptyBoxd(box_keys=[box_key], box_ref_image_keys=image_key),
             Orientationd(keys=[image_key], axcodes="RAS"),
             intensity_transform,
@@ -484,6 +484,13 @@ def generate_detection_train_transform_2d(
                 prob=0.5,
                 spatial_axis=1,
             ),
+            RandFlipBoxd(
+                image_keys=[image_key],
+                box_keys=[box_key],
+                box_ref_image_keys=[image_key],
+                prob=0.5,
+                spatial_axis=2,
+            ),
             RandRotateBox90d(
                 image_keys=[image_key],
                 box_keys=[box_key],
@@ -505,6 +512,8 @@ def generate_detection_train_transform_2d(
                 mode=["nearest", "nearest"],
                 prob=0.2,
                 range_x=np.pi / 6,
+                range_y=np.pi / 6,
+                range_z=np.pi / 6,
                 keep_size=True,
                 padding_mode="zeros",
             ),
@@ -521,10 +530,13 @@ def generate_detection_train_transform_2d(
                 prob=0.1,
                 sigma_x=(0.5, 1.0),
                 sigma_y=(0.5, 1.0),
+                sigma_z=(0.5, 1.0),
             ),
             RandScaleIntensityd(keys=[image_key], prob=0.15, factors=0.25),
             RandShiftIntensityd(keys=[image_key], prob=0.15, offsets=0.1),
             RandAdjustContrastd(keys=[image_key], prob=0.3, gamma=(0.7, 1.5)),
+            SelectTo2D(image_keys=[image_key], box_keys=box_key),
+            EmptyBoxdTo2d(box_keys=[box_key], spatial_dims=2),
             EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
             EnsureTyped(keys=[label_key], dtype=torch.long),
         ]
