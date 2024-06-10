@@ -23,6 +23,7 @@ from typing import Any
 
 import cv2
 import numpy as np
+import bcolors
 import torch
 from torch import Tensor, nn
 from torch.nn.utils.clip_grad import clip_grad_norm
@@ -55,6 +56,20 @@ from monai.utils import set_determinism
 
 from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RetinaNetDetector_debug
 from network.vitdet import vitdet_fpn_feature_extractor
+
+def print_network_params(params):
+    v_n,v_v,v_g = [],[],[]
+    for name, para in params:
+        v_n.append(name)
+        v_v.append(para.detach().cpu().numpy() if para is not None else [0])
+        v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
+    for i in range(len(v_n)):
+        if np.max(v_v[i]).item() - np.min(v_v[i]).item() < 1e-6:
+            color = bcolors.FAIL + '*'
+        else:
+            color = bcolors.OKGEEN + ' '
+        print('%svalue %s: %.3e ~ %.3e'%(color,v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item()))
+        print('%sgrad %s: %.3e ~ %.3e'%(color,v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item()))
 
 class OBJDetectInference():
     """
@@ -298,7 +313,7 @@ class OBJDetectInference():
         max_epochs = self.config_dict.get('finetune_epochs', 300)
         epoch_len = len(self.train_ds) // self.train_loader.batch_size
         w_cls = self.config_dict.get("w_cls", 1.0)  # weight between classification loss and box regression loss, default 1.0
-        torch.autograd.set_detect_anomaly(True) #for debug
+        #torch.autograd.set_detect_anomaly(True) #for debug
         #3. Train
         for epoch in range(max_epochs):
             # ------------- Training -------------
@@ -342,6 +357,8 @@ class OBJDetectInference():
                         loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     with torch.autograd.detect_anomaly(): #for debug
                         scaler.scale(loss).backward()
+                        print_network_params(detector.network.parameters())
+                    
                     #clip_grad_norm(detector.network.parameters(), 0.1) #add grad clip to avoid nan
                     scaler.step(optimizer)
                     scaler.update()
