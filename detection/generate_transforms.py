@@ -391,7 +391,10 @@ class SelectTo2D(MapTransform):
         ### aff change
         meta_dict = d[self.image_meta_key]
         affine = meta_dict["affine"]
-        print('Affine: ',affine.shape,affine)
+        print('2D Affine: ',affine.shape,affine)
+        affine = torch.index_select(torch.index_select(affine, 1, torch.LongTensor([0, 1, 3])),0,torch.LongTensor([0, 1, 3]))
+        print('2D Affine: ',affine.shape,affine)
+        meta_dict['affine'] = affine
         
         '''print('Trans SelectTo2D Output:')
         for k,v in d.items():
