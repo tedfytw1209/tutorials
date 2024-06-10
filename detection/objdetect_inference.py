@@ -308,7 +308,7 @@ class OBJDetectInference():
         max_epochs = self.config_dict.get('finetune_epochs', 300)
         epoch_len = len(self.train_ds) // self.train_loader.batch_size
         w_cls = self.config_dict.get("w_cls", 1.0)  # weight between classification loss and box regression loss, default 1.0
-        torch.autograd.set_detect_anomaly(True) #for debug
+        #torch.autograd.set_detect_anomaly(True) #for debug
         #3. Train
         for epoch in range(max_epochs):
             # ------------- Training -------------
