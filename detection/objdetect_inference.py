@@ -23,7 +23,6 @@ from typing import Any
 
 import cv2
 import numpy as np
-import bcolors
 import torch
 from torch import Tensor, nn
 from torch.nn.utils.clip_grad import clip_grad_norm
@@ -64,12 +63,8 @@ def print_network_params(params):
         v_v.append(para.detach().cpu().numpy() if para is not None else [0])
         v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
     for i in range(len(v_n)):
-        if np.max(v_v[i]).item() - np.min(v_v[i]).item() < 1e-6:
-            color = bcolors.FAIL + '*'
-        else:
-            color = bcolors.OKGEEN + ' '
-        print('%svalue %s: %.3e ~ %.3e'%(color,v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item()))
-        print('%sgrad %s: %.3e ~ %.3e'%(color,v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item()))
+        print('value %s: %.3e ~ %.3e'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item()))
+        print('grad %s: %.3e ~ %.3e'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item()))
 
 class OBJDetectInference():
     """
