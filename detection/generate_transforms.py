@@ -391,6 +391,7 @@ class SelectTo2D(MapTransform):
         ### aff change
         meta_dict = d[self.image_meta_key]
         affine = meta_dict["affine"]
+        print('Affine: ',affine.shape,affine)
         
         '''print('Trans SelectTo2D Output:')
         for k,v in d.items():
