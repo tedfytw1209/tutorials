@@ -88,7 +88,7 @@ class OBJDetectInference():
         debug_dict: dict,
         verbose: bool = False,
     ):
-        amp = False
+        amp = True
         if amp:
             self.compute_dtype = torch.float16
         else:
