@@ -3,7 +3,7 @@
 	"gt_box_mode": "cccwhd",
 	"lr": 1,
 	"finetune_epochs": 50,
-	"val_interval": 2,
+	"val_interval": 5,
 	"spacing": [0.703125, 0.703125],
 	"batch_size": 16,
 	"patch_size": [192,192,1],
