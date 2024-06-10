@@ -308,7 +308,7 @@ class OBJDetectInference():
         max_epochs = self.config_dict.get('finetune_epochs', 300)
         epoch_len = len(self.train_ds) // self.train_loader.batch_size
         w_cls = self.config_dict.get("w_cls", 1.0)  # weight between classification loss and box regression loss, default 1.0
-        #torch.autograd.set_detect_anomaly(True) #for debug
+        torch.autograd.set_detect_anomaly(True) #for debug
         #3. Train
         for epoch in range(max_epochs):
             # ------------- Training -------------
@@ -345,25 +345,25 @@ class OBJDetectInference():
 
                 for param in detector.network.parameters():
                     param.grad = None
-
-                if self.amp and (scaler is not None):
-                    with torch.cuda.amp.autocast():
+                with torch.autograd.detect_anomaly(): #for debug
+                    if self.amp and (scaler is not None):
+                        with torch.cuda.amp.autocast():
+                            outputs = detector(inputs, targets)
+                            loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
+                        #with torch.autograd.detect_anomaly(): #for debug
+                        scaler.scale(loss).backward()
+                        #print_network_params(detector.network.named_parameters())
+                        
+                        clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
                         outputs = detector(inputs, targets)
                         loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
-                    #with torch.autograd.detect_anomaly(): #for debug
-                    scaler.scale(loss).backward()
-                    #print_network_params(detector.network.named_parameters())
-                    
-                    clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
-                    scaler.step(optimizer)
-                    scaler.update()
-                else:
-                    outputs = detector(inputs, targets)
-                    loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
-                    #with torch.autograd.detect_anomaly(): #for debug
-                    loss.backward()
-                    clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
-                    optimizer.step()
+                        #with torch.autograd.detect_anomaly(): #for debug
+                        loss.backward()
+                        clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
+                        optimizer.step()
 
                 # save to tensorboard
                 epoch_loss += loss.detach().item()
