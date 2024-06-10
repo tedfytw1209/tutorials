@@ -56,15 +56,17 @@ from monai.utils import set_determinism
 from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RetinaNetDetector_debug
 from network.vitdet import vitdet_fpn_feature_extractor
 
-def print_network_params(params):
+def print_network_params(params, show_grad=True):
     v_n,v_v,v_g = [],[],[]
     for name, para in params:
         v_n.append(name)
         v_v.append(para.detach().cpu().numpy() if para is not None else [0])
-        v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
+        if show_grad:
+            v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
     for i in range(len(v_n)):
         print('value %s: %.3e ~ %.3e'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item()))
-        print('grad %s: %.3e ~ %.3e'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item()))
+        if show_grad:
+            print('grad %s: %.3e ~ %.3e'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item()))
 
 class OBJDetectInference():
     """
@@ -364,13 +366,15 @@ class OBJDetectInference():
                     print_network_params(detector.network.named_parameters())
                     #clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
                     optimizer.step()
-
+                
                 # save to tensorboard
                 epoch_loss += loss.detach().item()
                 epoch_cls_loss += outputs[detector.cls_key].detach().item()
                 epoch_box_reg_loss += outputs[detector.box_reg_key].detach().item()
                 print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
                 tensorboard_writer.add_scalar("train_loss", loss.detach().item(), epoch_len * epoch + step)
+                #tmp
+                raise('Stop Training for debug')
 
             end_time = time.time()
             print(f"Training time: {end_time-start_time}s")
@@ -551,11 +555,15 @@ class OBJDetectInference():
     #build Network
     def build_net(self,anchor_generator: AnchorGenerator):
         if self.model_name=='retinanet':
-            return self.build_retinanet(anchor_generator)
+            net = self.build_retinanet(anchor_generator)
         elif self.model_name=='vitdet':
-            return self.build_vitdet(anchor_generator)
+            net = self.build_vitdet(anchor_generator)
         else:
             raise ValueError("Could not find correct backbone model name (self.model_name=%s) , please specify it."%(self.model_name))
+        print('#'*20)
+        print('Build Network with structure:')
+        print_network_params(net.named_parameters(),show_grad=False)
+        return net
     #retina net
     def build_retinanet(self,anchor_generator: AnchorGenerator):
         #tmp code
@@ -638,13 +646,17 @@ class OBJDetectInference():
         num_anchors = anchor_generator.num_anchors_per_location()[0]
         # size_divisible (int or Sequence[int]) is the expectation on the input image shape.
         #size_divisible = [s * 2 * 2 ** max(args.returned_layers) for s in feature_extractor.body.conv1.stride]
+        if self.args.spatial_dims==2:
+            size_divisible = (16,16)
+        else:
+            size_divisible = (16,16,1)
         net = torch.jit.script(
             RetinaNet(
                 spatial_dims=self.args.spatial_dims,
                 num_classes=len(self.args.fg_labels),
                 num_anchors=num_anchors,
                 feature_extractor=feature_extractor,
-                #size_divisible=size_divisible, ###!!!image size of luna16?
+                size_divisible=size_divisible, ###!! tmp fix
             )
         )
         

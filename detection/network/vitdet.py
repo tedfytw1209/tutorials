@@ -182,6 +182,7 @@ class LayerNorm(nn.Module):
         self.bias = nn.Parameter(torch.empty(normalized_shape))
         self.eps = eps
         self.normalized_shape = (normalized_shape,)
+        self.reset_parameters() #!! for self initialize
 
     def forward(self, x):
         #print('Layer Norm input shape: ', x.shape)
@@ -584,7 +585,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
         #_assert_strides_are_log2_contiguous(strides)
 
         dim = input_shapes[in_feature].channels
-        tmp_stages = []
+        self.stages = nn.ModuleList() #for store sub modules
         use_bias = False
         for idx, scale in enumerate(scale_factors):
             out_dim = dim
@@ -654,9 +655,8 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
 
             stage = int(math.log2(strides[idx]))
             self.add_module(f"simfp_{stage}", layers) #torch func
-            tmp_stages.append(layers)
+            self.stages.append(layers)
         
-        self.stages = nn.ModuleList(tmp_stages)
         #self.net = net
         self.in_feature = in_feature
         self.top_block = top_block
@@ -889,7 +889,7 @@ def vitdet_fpn_feature_extractor(
         fpn,
         spatial_dims,
         valid_trainable_backbone_layers,
-        returned_layers=list(returned_layers),
+        returned_layers=list(returned_layers)
     )
     return feature_extractor
 
