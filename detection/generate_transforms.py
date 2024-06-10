@@ -373,10 +373,10 @@ class SelectTo2D(MapTransform):
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
-        print('Trans SelectTo2D Input:')
+        '''print('Trans SelectTo2D Input:')
         for k in [self.image_keys[0],self.box_keys]:
             v = d[k]
-            print(k, ": shape", v.shape)
+            print(k, ": shape", v.shape)'''
         ### !!! select the first image in z domain and change shape
         image_key = self.image_keys[0]
         tmp = d[image_key]
@@ -398,10 +398,10 @@ class SelectTo2D(MapTransform):
         meta_dict['affine'] = affine
         d[self.image_meta_key] = meta_dict'''
         
-        print('Trans SelectTo2D Output:')
+        '''print('Trans SelectTo2D Output:')
         for k in [self.image_keys[0],self.box_keys]:
             v = d[k]
-            print(k, ": shape", v.shape)
+            print(k, ": shape", v.shape)'''
         
         return d
 

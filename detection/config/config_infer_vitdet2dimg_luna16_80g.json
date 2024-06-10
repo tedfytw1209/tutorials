@@ -1,7 +1,7 @@
 {
 	"model": "vitdet",
 	"gt_box_mode": "cccwhd",
-	"lr": 1e-2,
+	"lr": 1e-4,
 	"finetune_epochs": 50,
 	"val_interval": 5,
 	"spacing": [0.703125, 0.703125],
