@@ -353,7 +353,6 @@ class OBJDetectInference():
                     #with torch.autograd.detect_anomaly(): #for debug
                     scaler.scale(loss).backward()
                     print_network_params(detector.network.named_parameters())
-                    
                     #clip_grad_norm_(detector.network.parameters(), 0.05) #add grad clip to avoid nan
                     scaler.step(optimizer)
                     scaler.update()
