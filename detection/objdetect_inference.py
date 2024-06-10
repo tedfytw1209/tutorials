@@ -416,7 +416,15 @@ class OBJDetectInference():
                         # save outputs for evaluation
                         val_outputs_all += val_outputs
                         val_targets_all += val_data
-
+                #print val_ouputs
+                for i in range(10):
+                    print('Val sample ', i)
+                    print(' val_outputs ', detector.target_box_key, '=>shape: ',val_outputs_all[i][detector.target_box_key].shape, ', value:', val_outputs_all[i][detector.target_box_key])
+                    print(' val_outputs ', detector.target_label_key, '=>shape: ',val_outputs_all[i][detector.target_label_key].shape, ', value:', val_outputs_all[i][detector.target_label_key])
+                    print(' val_outputs ', detector.pred_score_key, '=>shape: ',val_outputs_all[i][detector.pred_score_key].shape, ', value:', val_outputs_all[i][detector.pred_score_key])
+                    print(' val_targets ', detector.target_box_key, '=>shape: ',val_targets_all[i][detector.target_box_key].shape, ', value:', val_targets_all[i][detector.target_box_key])
+                    print(' val_targets ', detector.target_label_key, '=>shape: ',val_targets_all[i][detector.target_label_key].shape, ', value:', val_targets_all[i][detector.target_label_key])
+                    
                 end_time = time.time()
                 print(f"Validation time: {end_time-start_time}s")
 
