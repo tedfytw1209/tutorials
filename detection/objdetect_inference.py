@@ -421,13 +421,14 @@ class OBJDetectInference():
                 print(f"Validation time: {end_time-start_time}s")
 
                 # visualize an inference image and boxes to tensorboard
+                ''' !!! need implement 2d version
                 draw_img = visualize_one_xy_slice_in_3d_image(
                     gt_boxes=val_data[0]["box"].cpu().detach().numpy(),
                     image=val_inputs[0][0, ...].cpu().detach().numpy(),
                     pred_boxes=val_outputs[0][detector.target_box_key].cpu().detach().numpy(),
                 )
                 tensorboard_writer.add_image("val_img_xy", draw_img.transpose([2, 1, 0]), epoch + 1)
-
+                '''
                 # compute metrics
                 del val_inputs
                 torch.cuda.empty_cache()
