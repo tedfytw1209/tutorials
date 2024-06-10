@@ -12,9 +12,12 @@
 import torch
 import numpy as np
 from collections.abc import Callable, Hashable, Mapping, Sequence
+from monai.config.type_definitions import NdarrayOrTensor
 
 from monai.config import IndexSelection, KeysCollection, SequenceStr
 from monai.transforms.transform import LazyTransform, MapTransform, Randomizable
+from monai.transforms.inverse import InvertibleTransform
+from monai.apps.detection.transforms.array import StandardizeEmptyBox
 from monai.transforms import (
     Compose,
     DeleteItemsd,
@@ -321,11 +324,38 @@ def generate_detection_inference_transform(
     return test_transforms, post_transforms
 
 ### 2D version
+class EmptyBoxdTo2d(MapTransform, InvertibleTransform):
+    """
+    When boxes are empty, this transform standardize it to shape of (0,4).
+    """
+
+    def __init__(self, box_keys: KeysCollection, spatial_dims: int=2, allow_missing_keys: bool = False) -> None:
+        """
+        Args:
+            box_keys: Keys to pick data for transformation.
+            box_ref_image_keys: The single key that represents the reference image to which ``box_keys`` are attached.
+            allow_missing_keys: don't raise exception if key is missing.
+
+        See also :py:class:`monai.apps.detection,transforms.array.ConvertBoxToStandardMode`
+        """
+        super().__init__(box_keys, allow_missing_keys)
+        self.spatial_dims = spatial_dims
+
+    def __call__(self, data: Mapping[Hashable, NdarrayOrTensor]) -> dict[Hashable, NdarrayOrTensor]:
+        d = dict(data)
+        self.converter = StandardizeEmptyBox(spatial_dims=self.spatial_dims)
+        for key in self.key_iterator(d):
+            d[key] = self.converter(d[key])
+        return d
+
+    def inverse(self, data: Mapping[Hashable, NdarrayOrTensor]) -> dict[Hashable, NdarrayOrTensor]:
+        return dict(data)
+
 class SelectTo2D(MapTransform):
     """
     Dictionary-based wrapper that select 2D slice from 3d imagse.
     image shape (C, H, W, D) e.g. (1, 540, 540, 247)
-    box shape (N,6), [xmin, xmax, ymin, ymax, zmin, zmax]
+    box shape (N,6), [xmin, xmax, ymin, ymax, zmin, zmax] or [xmin, ymin, zmin, xmax, ymax, zmax] (standardized mode)
 
     Args:
         keys: keys of the corresponding items to be transformed.
@@ -349,11 +379,12 @@ class SelectTo2D(MapTransform):
         ### !!! select the first image in z domain and change shape
         image_key = self.image_keys[0]
         tmp = d[image_key]
-        tmp = tmp[:,:,:,0].squeeze(dim=-1)
+        tmp = tmp[:,:,:,0]
         d[image_key] = tmp
             
         ### create new box value
         tmp_box = d[self.box_keys]
+        #tmp_box = torch.index_select(tmp_box, 1, torch.LongTensor([0, 1, 3, 4]))
         tmp_box = tmp_box[:,:4]
         d[self.box_keys] = tmp_box
         
