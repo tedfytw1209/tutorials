@@ -75,7 +75,7 @@ def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
     names_dict = OrderedDict()
     for name in params_names:
         if name.startswith('encoder.'):
-            new_name = name.copy()
+            new_name = name
             #not transform encoder_pos_embed
             new_name = new_name.replace('.patch_embed.proj', '.patch_embedding.patch_embeddings')
             new_name = new_name.replace('.fc', '.linear')
