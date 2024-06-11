@@ -84,8 +84,8 @@ def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
             new_state_dict[new_name] = state_dict.pop(name)
             names_dict[name] = new_name
     #return
-    print('Transform param name:')
-    print([(k,v) for k, v in names_dict.items()])
+    #print('Transform param name:')
+    #print([(k,v) for k, v in names_dict.items()])
     return new_state_dict
 
 class OBJDetectInference():
