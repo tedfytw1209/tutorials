@@ -71,3 +71,44 @@ def visualize_one_xy_slice_in_3d_image(gt_boxes, image, pred_boxes, gt_box_index
             thickness=1,
         )
     return draw_img
+
+def visualize_one_xy_slice_in_2d_image(gt_boxes, image, pred_boxes, gt_box_index=0):
+    """
+    Prepare a 2D xy-plane image slice from a 2D image for visualization.
+    It draws the (gt_box_index)-th GT box and predicted boxes on the same slice.
+    The GT box will be green rect overlayed on the image.
+    The predicted boxes will be red boxes overlayed on the image.
+
+    Args:
+        gt_boxes: numpy sized (M, 4)
+        image: image numpy array, sized (H, W)
+        pred_boxes: numpy array sized (N, 4)
+    """
+    draw_box = gt_boxes[gt_box_index, :]
+    draw_box_center = [round((draw_box[axis] + draw_box[axis + 2] - 1) / 2.0) for axis in range(2)]
+    draw_box = np.round(draw_box).astype(int).tolist()
+
+    # draw image
+    draw_img = normalize_image_to_uint8(image)
+    draw_img = cv2.cvtColor(draw_img, cv2.COLOR_GRAY2BGR)
+
+    # draw GT box, notice that cv2 uses Cartesian indexing instead of Matrix indexing.
+    # so the xy position needs to be transposed.
+    cv2.rectangle(
+        draw_img,
+        pt1=(draw_box[1], draw_box[0]),
+        pt2=(draw_box[3], draw_box[2]),
+        color=(0, 255, 0),  # green for GT
+        thickness=1,
+    )
+    # draw predicted boxes
+    for bbox in pred_boxes:
+        bbox = np.round(bbox).astype(int).tolist()
+        cv2.rectangle(
+            draw_img,
+            pt1=(bbox[1], bbox[0]),
+            pt2=(bbox[3], bbox[2]),
+            color=(255, 0, 0),  # red for predicted box
+            thickness=1,
+        )
+    return draw_img

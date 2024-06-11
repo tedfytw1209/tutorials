@@ -262,7 +262,6 @@ def generate_detection_inference_transform(
     intensity_transform,
     affine_lps_to_ras=False,
     amp=True,
-    spatial_dims=3,
 ):
     """
     Generate validation transform for detection.
@@ -287,11 +286,6 @@ def generate_detection_inference_transform(
         compute_dtype = torch.float16
     else:
         compute_dtype = torch.float32
-    ###!!! bug if spatial_dims==2
-    if spatial_dims==3:
-        add_transform = Identity()
-    elif spatial_dims==2:
-        add_transform = SqueezeDim(dim=-1)
 
     test_transforms = Compose(
         [

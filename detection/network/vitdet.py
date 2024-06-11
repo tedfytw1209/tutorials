@@ -182,7 +182,7 @@ class LayerNorm(nn.Module):
         self.bias = nn.Parameter(torch.empty(normalized_shape))
         self.eps = eps
         self.normalized_shape = (normalized_shape,)
-        self.reset_parameters() #!! for self initialize
+        self.reset_parameters() #self initialize
 
     def forward(self, x):
         #print('Layer Norm input shape: ', x.shape)
@@ -253,7 +253,7 @@ class SABlock(nn.Module):
         self.att_mat = torch.Tensor()
         
         '''self.use_rel_pos = use_rel_pos
-        if self.use_rel_pos: #!!!not check
+        if self.use_rel_pos:
             # initialize relative positional embeddings
             self.rel_pos_h = nn.Parameter(torch.zeros(2 * input_size[0] - 1, self.dim_head))
             self.rel_pos_w = nn.Parameter(torch.zeros(2 * input_size[1] - 1, self.dim_head))
@@ -276,7 +276,7 @@ class SABlock(nn.Module):
         output = self.input_rearrange(self.qkv(x))
         q, k, v = output[0], output[1], output[2]
         att_mat = (torch.einsum("blxd,blyd->blxy", q, k) * self.scale)
-        '''if self.use_rel_pos: #!!!not check
+        '''if self.use_rel_pos:
             att_mat = add_decomposed_rel_pos(att_mat, q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W))'''
         att_mat = att_mat.softmax(dim=-1)
         
@@ -467,7 +467,7 @@ class ViTDet(nn.Module):
         self.spatial_dims = spatial_dims
 
         self.classification = classification
-        #!!! need check position encoding code
+        #position encoding
         self.patch_embedding = PatchEmbeddingBlock(
             in_channels=in_channels,
             img_size=img_shape, #use shape for convenience
@@ -542,7 +542,7 @@ class ViTDet(nn.Module):
             for name in self._out_features
         }
         
-class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
+class SimpleFeaturePyramid(nn.Module):
     """
     ViTDet, based on: "Yanghao Li et al.,
     Exploring plain vision transformer backbones for object detection <https://arxiv.org/abs/2203.16527>"
@@ -592,13 +592,13 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             if scale == 16.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
-                    LayerNorm(dim // 4,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 4,eps=1e-5), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
-                    LayerNorm(dim // 8,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 8,eps=1e-5), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 8, dim // 16, kernel_size=2, stride=2),
                 ]
@@ -617,7 +617,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
             elif scale == 4.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
                 ]
@@ -640,7 +640,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                         kernel_size=1,
                         bias=use_bias,
                     ),
-                    LayerNorm(out_channels,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(out_channels,eps=1e-5), #! detectron2 use 1e-6
                     nn.Conv2d(
                         out_channels,
                         out_channels,
@@ -648,7 +648,7 @@ class SimpleFeaturePyramid(nn.Module): ###!!! Not checked
                         padding=1,
                         bias=use_bias,
                     ),
-                    LayerNorm(out_channels,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(out_channels,eps=1e-5), #! detectron2 use 1e-6
                 ]
             )
             layers = nn.Sequential(*layers)
@@ -723,10 +723,10 @@ class LastLevelMaxPool(nn.Module):
     P6 feature from P5.
     """
 
-    def __init__(self, spatial_dims: int = 2):
+    def __init__(self, spatial_dims: int = 2, in_feature: str = "feat2"):
         super().__init__()
         self.num_levels = 1
-        self.in_feature = "feat2" #!!!need change depend on scales
+        self.in_feature = in_feature
         pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[Pool.MAX, spatial_dims]
         self.maxpool = pool_type(kernel_size=1, stride=2, padding=0)
 
@@ -797,7 +797,7 @@ class BackboneWithFPN_vitdet(nn.Module):
         for k,v in features.items():
             print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.sum(dim=(1,2,3)))'''
         y: dict[str, Tensor] = self.fpn(features)  # FPN
-        if self.dim_change_flag: #change back for detector used, !!!need check
+        if self.dim_change_flag: #change back for detector used
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
             '''print('BackboneWithFPN_vitdet Output Features Shape: ')
             for k,v in out_dict.items():
@@ -808,7 +808,6 @@ class BackboneWithFPN_vitdet(nn.Module):
         return out_dict
         
 
-#!!! need change
 def _vit_fpn_extractor(
     backbone: nn.Module,
     fpn: nn.Module,
@@ -823,7 +822,7 @@ def _vit_fpn_extractor(
     """
 
     # select layers that wont be frozen
-    #!!! need ask about finetune process
+    #!! need ask about finetune process
     '''if trainable_layers < 0 or trainable_layers > 5:
         raise ValueError(f"Trainable layers should be in the range [0,5], got {trainable_layers}")
     layers_to_train = ["layer4", "layer3", "layer2", "layer1", "conv1"][:trainable_layers]
@@ -845,7 +844,7 @@ def _vit_fpn_extractor(
         backbone, fpn, return_layers, in_channels_list, out_channels, spatial_dims=spatial_dims
     )
 
-#!!! need check the pretrained backbone setting
+#!! need check the pretrained backbone setting
 def vitdet_fpn_feature_extractor(
     backbone: nn.Module,
     fpn: nn.Module,

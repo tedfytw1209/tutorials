@@ -36,7 +36,7 @@ from generate_transforms import (
 )
 
 from torch.utils.tensorboard import SummaryWriter
-from visualize_image import visualize_one_xy_slice_in_3d_image
+from visualize_image import visualize_one_xy_slice_in_3d_image,visualize_one_xy_slice_in_2d_image
 from warmup_scheduler import GradualWarmupScheduler
 
 import monai
@@ -165,7 +165,7 @@ class OBJDetectInference():
             affine_lps_to_ras=True,
             amp=amp,
         )
-        # !!change to val transform
+        # Use val transform
         inference_transforms = val_transforms_func(
             "image",
             "box",
@@ -326,6 +326,10 @@ class OBJDetectInference():
         optimizer, scheduler, scaler = self.train_setting(detector)
         # initialize tensorboard writer
         tensorboard_writer = SummaryWriter(self.args.tfevent_path)
+        if self.args.spatial_dims==3:
+            draw_func = visualize_one_xy_slice_in_3d_image
+        elif self.args.spatial_dims==2:
+            draw_func = visualize_one_xy_slice_in_2d_image
         val_interval = self.config_dict.get('val_interval', 5)  # do validation every val_interval epochs
         best_val_epoch_metric = 0.0
         best_val_epoch = -1  # the epoch that gives best validation metrics
@@ -455,14 +459,13 @@ class OBJDetectInference():
                 print(f"Validation time: {end_time-start_time}s")
 
                 # visualize an inference image and boxes to tensorboard
-                ''' !!! need implement 2d version
-                draw_img = visualize_one_xy_slice_in_3d_image(
+                draw_img = draw_func(
                     gt_boxes=val_data[0]["box"].cpu().detach().numpy(),
                     image=val_inputs[0][0, ...].cpu().detach().numpy(),
                     pred_boxes=val_outputs[0][detector.target_box_key].cpu().detach().numpy(),
                 )
                 tensorboard_writer.add_image("val_img_xy", draw_img.transpose([2, 1, 0]), epoch + 1)
-                '''
+
                 # compute metrics
                 del val_inputs
                 torch.cuda.empty_cache()
@@ -651,7 +654,7 @@ class OBJDetectInference():
             in_feature="feat", #need same as ViTdet output feature
             out_channels=self.args.out_channels,
             scale_factors=self.args.scale_factors, #feat1~5
-            top_block=None, #!! change to no top_block
+            top_block=None, #! change to no top_block
             square_pad=self.args.img_size,
             spatial_dims=model_spatial_dims
             )
@@ -669,16 +672,18 @@ class OBJDetectInference():
         # size_divisible (int or Sequence[int]) is the expectation on the input image shape.
         #size_divisible = [s * 2 * 2 ** max(args.returned_layers) for s in feature_extractor.body.conv1.stride]
         if self.args.spatial_dims==2:
-            size_divisible = (16,16)
+            size_divisible = (self.args.model_patch_size,self.args.model_patch_size)
+        elif model_spatial_dims==2:
+            size_divisible = (self.args.model_patch_size,self.args.model_patch_size,1)
         else:
-            size_divisible = (16,16,1)
+            size_divisible = tuple(self.args.model_patch_size for i in range(self.args.spatial_dims))
         net = torch.jit.script(
             RetinaNet(
                 spatial_dims=self.args.spatial_dims,
                 num_classes=len(self.args.fg_labels),
                 num_anchors=num_anchors,
                 feature_extractor=feature_extractor,
-                size_divisible=size_divisible, ###!! tmp fix
+                size_divisible=size_divisible,
             )
         )
         
@@ -695,7 +700,7 @@ class OBJDetectInference():
     #retinanet
     def build_retinanet_detector(self,net,anchor_generator,device,train=True,valid=True):
         detector = RetinaNetDetector_debug(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
-        #!!! need consider image mean and std
+        #!!! need ask consider image mean and std or not?
         # set training components
         if train:
             detector.set_atss_matcher(num_candidates=4, center_in_gt=False)
@@ -788,13 +793,13 @@ if __name__ == "__main__":
         default="",
         help="pre-trained model path for testing",
     )
-    parser.add_argument( ###!!! not implement now
+    parser.add_argument(
         "-t",
         "--testmode",
         default="full",
         help="which part of func need to test",
     )
-    parser.add_argument( ###!!! not implement now
+    parser.add_argument(
         "-d",
         "--deter",
         default=False,
