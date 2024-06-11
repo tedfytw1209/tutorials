@@ -744,11 +744,11 @@ class OBJDetectInference():
     
 def load_model(path=None,transform_func=None):
     if path:  # make sure to load pretrained model
-        if '.ckpt' in args.model_path:
-            state = torch.load(args.model_path, map_location='cpu')
+        if '.ckpt' in path:
+            state = torch.load(path, map_location='cpu')
             model = state
-        elif '.pth' in args.model_path:
-            state = torch.load(args.model_path, map_location='cpu')
+        elif '.pth' in path:
+            state = torch.load(path, map_location='cpu')
             model = state['state_dict']
         if transform_func!=None:
             model = transform_func(model)
