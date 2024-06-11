@@ -242,7 +242,7 @@ class SABlock(nn.Module):
         self.dim_head = hidden_size // num_heads if dim_head is None else dim_head
         self.inner_dim = self.dim_head * num_heads
 
-        self.out_proj = nn.Linear(self.inner_dim, hidden_size)
+        self.proj = nn.Linear(self.inner_dim, hidden_size)
         self.qkv = nn.Linear(hidden_size, self.inner_dim * 3, bias=qkv_bias)
         self.input_rearrange = Rearrange("b h (qkv l d) -> qkv b l h d", qkv=3, l=num_heads)
         self.out_rearrange = Rearrange("b h l d -> b l (h d)")
@@ -288,7 +288,7 @@ class SABlock(nn.Module):
         att_mat = self.drop_weights(att_mat)
         x = torch.einsum("bhxy,bhyd->bhxd", att_mat, v)
         x = self.out_rearrange(x)
-        x = self.out_proj(x)
+        x = self.proj(x)
         x = self.drop_output(x)
         return x
 

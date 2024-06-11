@@ -20,6 +20,7 @@ import logging
 import sys
 import time
 from typing import Any
+from collections import OrderedDict
 
 import cv2
 import numpy as np
@@ -67,6 +68,25 @@ def print_network_params(params, show_grad=True):
         print('value %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item(),np.mean(v_v[i]).item()))
         if show_grad:
             print('grad %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item(),np.mean(v_v[i]).item()))
+
+def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
+    new_state_dict = OrderedDict()
+    params_names = [k for k in state_dict.keys()]
+    names_dict = OrderedDict()
+    for name in params_names:
+        if name.startswith('encoder.'):
+            new_name = name.copy()
+            #not transform encoder_pos_embed
+            new_name = new_name.replace('.patch_embed.proj', '.patch_embedding.patch_embeddings')
+            new_name = new_name.replace('.fc', '.linear')
+            #encoder. => feature_extractor.body.
+            new_name = new_name.replace('encoder.', 'feature_extractor.body.')
+            new_state_dict[new_name] = state_dict.pop(name)
+            names_dict[name] = new_name
+    #return
+    print('Transform param name:')
+    print([(k,v) for k, v in names_dict.items()])
+    return new_state_dict
 
 class OBJDetectInference():
     """
@@ -236,7 +256,7 @@ class OBJDetectInference():
         """
         return self.compute(*args, **kwargs)
     
-    def compute(self, pretrain_network: nn.Module) -> dict:
+    def compute(self, pretrain_network) -> dict:
         """
         Run inference with the `network` pretrained-model.
         1. First build the model and load pre-trained-model
@@ -294,7 +314,9 @@ class OBJDetectInference():
         net = self.build_net(anchor_generator)
         #1-3. load pre-train network !
         if pre_net!=None:
+            print('Loaded pretrained model:')
             net.load_state_dict(pre_net, strict=False)
+            print_network_params(net.named_parameters(),show_grad=False)
 
         # 1-4. build detector
         detector = self.build_detector(net,anchor_generator,device,train=True,valid=True)
@@ -720,14 +742,16 @@ class OBJDetectInference():
         
         return optimizer, scheduler, scaler
     
-def load_model(path=None):
+def load_model(path=None,transform_func=None):
     if path:  # make sure to load pretrained model
         if '.ckpt' in args.model_path:
             state = torch.load(args.model_path, map_location='cpu')
             model = state
         elif '.pth' in args.model_path:
             state = torch.load(args.model_path, map_location='cpu')
-            model = state['model']
+            model = state['state_dict']
+        if transform_func!=None:
+            model = transform_func(model)
     else:
         model = None
     return model
@@ -780,7 +804,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = json.load(open(args.environment_file, "r"))
     config_dict = json.load(open(args.config_file, "r"))
-    pretrained_model = load_model(args.model)
+    keys_trans = None
+    if env_dict.get("model","")=="vitdet":
+        keys_trans = transform_vitkeys_from_basemodel
+    pretrained_model = load_model(args.model,keys_trans)
     test_mode = args.testmode
     debug_dict = {} #full test
     if args.testmode=='train': #train func test
