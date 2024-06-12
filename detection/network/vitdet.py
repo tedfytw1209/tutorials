@@ -688,11 +688,11 @@ class SimpleFeaturePyramid(nn.Module):
                 convention: "p<stage>", where stage has stride = 2 ** stage e.g.,
                 ["feat2", "feat3", ..., "feat6"]. patch default 16, 5 feature maps
                 {
-                    "feat2": Tensor(B, 4*H/patch, 4*W/patch, C)
-                    "feat3": Tensor(B, 2*H/patch, 2*W/patch, C)
-                    "feat4": Tensor(B, H/patch, W/patch, C)
-                    "feat5": Tensor(B, H/(2*patch), W/(2*patch), C)
-                    "feat6": Tensor(B, H/(4*patch), W/(4*patch), C)
+                    "feat2": Tensor(B,C, 4*H/patch, 4*W/patch)
+                    "feat3": Tensor(B,C, 2*H/patch, 2*W/patch)
+                    "feat4": Tensor(B,C, H/patch, W/patch)
+                    "feat5": Tensor(B,C, H/(2*patch), W/(2*patch))
+                    "feat6": Tensor(B,C, H/(4*patch), W/(4*patch))
                 }
         """
         #bottom_up_features = self.net(x)
@@ -795,7 +795,7 @@ class BackboneWithFPN_vitdet(nn.Module):
         features: dict[str, Tensor] = self.body(x)  # backbone
         print('Vitdet Output Features Shape: ')
         for k,v in features.items():
-            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=2),' ,range: ', v[0,:,:,:].min(dim=2), " ~ ", v[0,:,:,:].max(dim=2))
+            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=0),' ,range: ', v[0,:,:,:].min(dim=0), " ~ ", v[0,:,:,:].max(dim=0))
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
@@ -803,7 +803,7 @@ class BackboneWithFPN_vitdet(nn.Module):
             out_dict = y
         print('BackboneWithFPN_vitdet Output Features Shape: ')
         for k,v in out_dict.items():
-            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=2),' ,range: ', v[0,:,:,:].min(dim=2), " ~ ", v[0,:,:,:].max(dim=2))
+            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=0),' ,range: ', v[0,:,:,:].min(dim=0), " ~ ", v[0,:,:,:].max(dim=0))
     
         return out_dict
         
@@ -973,8 +973,8 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
         print('class head:')
         for i in range(len(head_outputs[self.cls_key])):
-            cls_sample = head_outputs[self.cls_key][i][0,:,:,:]
-            reg_sample = head_outputs[self.box_reg_key][i][0,:,:,:]
+            cls_sample = head_outputs[self.cls_key][i][0]
+            reg_sample = head_outputs[self.box_reg_key][i][0]
             print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
             print(i , "regression head=> shape: ", reg_sample.shape," , mean: ",reg_sample.mean(dim=0),' ,range: ', reg_sample.min(dim=0), " ~ ", reg_sample.max(dim=0))
 
@@ -993,7 +993,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             head_outputs[key] = self._reshape_maps(head_outputs[key])
         print('Detector after reshape:')
         for i in range(len(head_outputs[self.cls_key])):
-            print(head_outputs[self.cls_key])
+            print(head_outputs[self.cls_key].shape)
             #cls_sample = head_outputs[self.cls_key][i][0,:,:]
             #print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
 
