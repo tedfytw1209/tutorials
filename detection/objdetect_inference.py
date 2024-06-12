@@ -523,7 +523,10 @@ class OBJDetectInference():
 
         # 3) build detector (!changed to validation like detector)
         detector = self.build_detector(net,anchor_generator,device,train=False,valid=True)
-
+        if self.args.spatial_dims==3:
+            draw_func = visualize_one_xy_slice_in_3d_image
+        elif self.args.spatial_dims==2:
+            draw_func = visualize_one_xy_slice_in_2d_image
         ###! use mscoco evaluation metric noe, mAP,mAR
         # 4. apply trained model
         detector.eval()
