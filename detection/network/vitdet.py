@@ -993,8 +993,9 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             head_outputs[key] = self._reshape_maps(head_outputs[key])
         print('Detector after reshape:')
         for i in range(len(head_outputs[self.cls_key])):
-            cls_sample = head_outputs[self.cls_key][i][0,:,:]
-            print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
+            print(head_outputs[self.cls_key])
+            #cls_sample = head_outputs[self.cls_key][i][0,:,:]
+            #print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
 
         # 6(1). If during training, return losses
         if self.training:
