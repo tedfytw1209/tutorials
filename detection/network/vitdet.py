@@ -803,7 +803,7 @@ class BackboneWithFPN_vitdet(nn.Module):
             out_dict = y
         print('BackboneWithFPN_vitdet Output Features Shape: ')
         for k,v in out_dict.items():
-            print("Feature names: ", k, "=> shape: ", v[0,:,:,:,:].shape," , mean: ",v[0,:,:,:,:].mean(dim=3),' ,range: ', v[0,:,:,:,:].min(dim=3), " ~ ", v[0,:,:,:,:].max(dim=3))
+            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=2),' ,range: ', v[0,:,:,:].min(dim=2), " ~ ", v[0,:,:,:].max(dim=2))
     
         return out_dict
         
