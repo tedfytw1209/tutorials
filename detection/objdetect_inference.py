@@ -535,9 +535,7 @@ class OBJDetectInference():
             for test_data in self.inference_loader:
                 # if all val_data_i["image"] smaller than self.args.val_patch_size, no need to use inferer
                 # otherwise, need inferer to handle large input images.
-                use_inferer = not all(
-                    [test_data_i["image"][0, ...].numel() < np.prod(self.args.val_patch_size) for test_data_i in test_data]
-                )
+                use_inferer = True #!!! tmp fix
                 test_inputs = [test_data_i.pop("image").to(device) for test_data_i in test_data]
 
                 if self.amp:
