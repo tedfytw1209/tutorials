@@ -393,6 +393,8 @@ class OBJDetectInference():
                     clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     optimizer.step()
                 
+                raise('Stop and debug')
+                
                 # save to tensorboard
                 epoch_loss += loss.detach().item()
                 epoch_cls_loss += outputs[detector.cls_key].detach().item()

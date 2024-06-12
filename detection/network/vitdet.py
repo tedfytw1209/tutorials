@@ -799,12 +799,12 @@ class BackboneWithFPN_vitdet(nn.Module):
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
-            print('BackboneWithFPN_vitdet Output Features Shape: ')
-            for k,v in out_dict.items():
-                print("Feature names: ", k, "=> shape: ", v[0,:,:,:,:].shape," , mean: ",v[0,:,:,:,:].mean(dim=3),' ,range: ', v[0,:,:,:,:].min(dim=3), " ~ ", v[0,:,:,:,:].max(dim=3))
         else:
             out_dict = y
-        
+        print('BackboneWithFPN_vitdet Output Features Shape: ')
+        for k,v in out_dict.items():
+            print("Feature names: ", k, "=> shape: ", v[0,:,:,:,:].shape," , mean: ",v[0,:,:,:,:].mean(dim=3),' ,range: ', v[0,:,:,:,:].min(dim=3), " ~ ", v[0,:,:,:,:].max(dim=3))
+    
         return out_dict
         
 
@@ -976,7 +976,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             cls_sample = head_outputs[self.cls_key][i][0,:,:,:]
             reg_sample = head_outputs[self.box_reg_key][i][0,:,:,:]
             print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
-            print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
+            print(i , "regression head=> shape: ", reg_sample.shape," , mean: ",reg_sample.mean(dim=0),' ,range: ', reg_sample.min(dim=0), " ~ ", reg_sample.max(dim=0))
 
         # 4. Generate anchors and store it in self.anchors: List[Tensor]
         self.generate_anchors(images, head_outputs)
