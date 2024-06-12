@@ -381,7 +381,7 @@ class OBJDetectInference():
                     #with torch.autograd.detect_anomaly(): #for debug
                     scaler.scale(loss).backward()
                     #print_network_params(detector.network.named_parameters())
-                    clip_grad_norm_(detector.network.parameters(), 5) #add grad clip to avoid nan
+                    clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     scaler.step(optimizer)
                     scaler.update()
                 else:
@@ -390,7 +390,7 @@ class OBJDetectInference():
                     #with torch.autograd.detect_anomaly(): #for debug
                     loss.backward()
                     #print_network_params(detector.network.named_parameters())
-                    clip_grad_norm_(detector.network.parameters(), 5) #add grad clip to avoid nan
+                    clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     optimizer.step()
                 
                 # save to tensorboard
