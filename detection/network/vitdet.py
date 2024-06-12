@@ -793,15 +793,15 @@ class BackboneWithFPN_vitdet(nn.Module):
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
         features: dict[str, Tensor] = self.body(x)  # backbone
-        '''print('Vitdet Output Features Shape: ')
+        print('Vitdet Output Features Shape: ')
         for k,v in features.items():
-            print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.sum(dim=(1,2,3)))'''
+            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=2),' ,range: ', v[0,:,:,:].min(dim=2), " ~ ", v[0,:,:,:].max(dim=2))
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
-            '''print('BackboneWithFPN_vitdet Output Features Shape: ')
+            print('BackboneWithFPN_vitdet Output Features Shape: ')
             for k,v in out_dict.items():
-                print("Feature names: ", k, "=> shape: ", v.shape," , mean: ",v.sum(dim=(1,2,3,4)))'''
+                print("Feature names: ", k, "=> shape: ", v[0,:,:,:,:].shape," , mean: ",v[0,:,:,:,:].mean(dim=3),' ,range: ', v[0,:,:,:,:].min(dim=3), " ~ ", v[0,:,:,:,:].max(dim=3))
         else:
             out_dict = y
         
@@ -968,12 +968,21 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             head_outputs = predict_with_inferer(
                 images, self.network, keys=[self.cls_key, self.box_reg_key], inferer=self.inferer
             )
+        print('Head outputs:')
+        #classification outs: cls_logits_maps[i] is a (B, num_anchors * num_classes, H_i, W_i) or (B, num_anchors * num_classes, H_i, W_i, D_i) Tensor
+        #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
+        print('class head:')
+        for i in range(len(head_outputs[self.cls_key])):
+            cls_sample = head_outputs[self.cls_key][i][0,:,:,:]
+            reg_sample = head_outputs[self.box_reg_key][i][0,:,:,:]
+            print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
+            print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
 
         # 4. Generate anchors and store it in self.anchors: List[Tensor]
         self.generate_anchors(images, head_outputs)
         # num_anchor_locs_per_level: List[int], list of HW or HWD for each level
         num_anchor_locs_per_level = [x.shape[2:].numel() for x in head_outputs[self.cls_key]]
-        #print('num_anchor_locs_per_level: ', num_anchor_locs_per_level)
+        print('num_anchor_locs_per_level: ', num_anchor_locs_per_level)
 
         # 5. Reshape and concatenate head_outputs values from List[Tensor] to Tensor
         # head_outputs, originally being Dict[str, List[Tensor]], will be reshaped to Dict[str, Tensor]
@@ -982,9 +991,10 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             # or (B, sum(HWA), 2* self.spatial_dims) for self.box_reg_key
             # A = self.num_anchors_per_loc
             head_outputs[key] = self._reshape_maps(head_outputs[key])
-        '''print('Detector after reshape:')
-        for k,v in head_outputs.items():
-            print(k , " shape: ", v.shape)'''
+        print('Detector after reshape:')
+        for i in range(len(head_outputs[self.cls_key])):
+            cls_sample = head_outputs[self.cls_key][i][0,:,:]
+            print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
 
         # 6(1). If during training, return losses
         if self.training:
@@ -999,6 +1009,41 @@ class RetinaNetDetector_debug(RetinaNetDetector):
                 head_outputs, self.anchors, image_sizes, num_anchor_locs_per_level  # type: ignore
             )
             return detections
+    
+    def compute_loss(
+        self,
+        head_outputs_reshape: dict[str, Tensor],
+        targets: list[dict[str, Tensor]],
+        anchors: list[Tensor],
+        num_anchor_locs_per_level: Sequence[int],
+    ) -> dict[str, Tensor]:
+        """
+        Compute losses.
+
+        Args:
+            head_outputs_reshape: reshaped head_outputs. ``head_output_reshape[self.cls_key]`` is a Tensor
+              sized (B, sum(HW(D)A), self.num_classes). ``head_output_reshape[self.box_reg_key]`` is a Tensor
+              sized (B, sum(HW(D)A), 2*self.spatial_dims)
+            targets: a list of dict. Each dict with two keys: self.target_box_key and self.target_label_key,
+                ground-truth boxes present in the image.
+            anchors: a list of Tensor. Each Tensor represents anchors for each image,
+                sized (sum(HWA), 2*spatial_dims) or (sum(HWDA), 2*spatial_dims).
+                A = self.num_anchors_per_loc.
+
+        Return:
+            a dict of several kinds of losses.
+        """
+        matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
+        print('Matched indexs for sample', 0)
+        print(matched_idxs[0].shape)
+        print(matched_idxs[0])
+        losses_cls = self.compute_cls_loss(head_outputs_reshape[self.cls_key], targets, matched_idxs)
+        losses_box_regression = self.compute_box_loss(
+            head_outputs_reshape[self.box_reg_key], targets, anchors, matched_idxs
+        )
+        print('Detector output loss:')
+        print({self.cls_key: losses_cls, self.box_reg_key: losses_box_regression})
+        return {self.cls_key: losses_cls, self.box_reg_key: losses_box_regression}
     #copy only for debug (print step result used)
     def get_cls_train_sample_per_image(
         self, cls_logits_per_image: Tensor, targets_per_image: dict[str, Tensor], matched_idxs_per_image: Tensor
@@ -1084,7 +1129,8 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             sampled_pos_inds = torch.where(torch.cat(sampled_pos_inds_list, dim=0))[0]
             sampled_neg_inds = torch.where(torch.cat(sampled_neg_inds_list, dim=0))[0]
             valid_idxs_per_image = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
-
+        print('cls_logits_per_image[valid_idxs_per_image, :]', cls_logits_per_image[valid_idxs_per_image, :])
+        print('gt_classes_target[valid_idxs_per_image, :]', gt_classes_target[valid_idxs_per_image, :])
         return cls_logits_per_image[valid_idxs_per_image, :], gt_classes_target[valid_idxs_per_image, :]
 
     def get_box_train_sample_per_image(
@@ -1148,5 +1194,6 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             matched_gt_boxes_per_image_ = self.box_coder.encode_single(matched_gt_boxes_per_image_, anchors_per_image)
         if self.decode_pred:
             box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
-
+        print('box_regression_per_image_', box_regression_per_image_)
+        print('matched_gt_boxes_per_image_',matched_gt_boxes_per_image_)
         return box_regression_per_image_, matched_gt_boxes_per_image_
