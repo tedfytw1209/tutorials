@@ -48,7 +48,6 @@ if __name__ == "__main__":
     if config_dict.get("model","")=="vitdet":
         keys_trans = transform_vitkeys_from_basemodel
     pretrained_model = load_model(args.model,keys_trans)
-    test_mode = args.testmode
     debug_dict = {} #full test
     debug_dict['use_train'] = False
     if args.deter:
