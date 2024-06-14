@@ -1,0 +1,5 @@
+{
+    "orig_data_base_dir": "/orange/bianjiang/tienyu/LUNA16_Images_resample",
+    "data_base_dir": "/orange/bianjiang/tienyu/LUNA16_Images_resample",
+    "data_list_file_path": "/orange/bianjiang/tienyu/LUNA16_datasplit/mhd_original/dataset_fold0.json"
+}

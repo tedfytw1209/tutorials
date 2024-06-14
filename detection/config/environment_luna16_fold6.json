@@ -1,0 +1,7 @@
+{
+    "model_path": "/blue/bianjiang/tienyuchang/trained_models/model_luna16_fold6.pt",
+    "data_base_dir": "/orange/bianjiang/tienyu/LUNA16_Images_resample",
+    "data_list_file_path": "/orange/bianjiang/tienyu/LUNA16_datasplit/dataset_fold6.json",
+    "tfevent_path": "/blue/bianjiang/tienyuchang/tfevent_train/luna16_fold6",
+    "result_list_file_path": "/blue/bianjiang/tienyuchang/result/result_luna16_fold6.json"
+}
