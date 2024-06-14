@@ -56,6 +56,7 @@ from monai.utils import set_determinism
 
 from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RetinaNetDetector_debug
 from network.vitdet import vitdet_fpn_feature_extractor
+from utils.detection_metric import mAP_with_IoU,mAR_with_IoU,AP_at_IoU
 
 def print_network_params(params, show_grad=True):
     v_n,v_v,v_g = [],[],[]
@@ -556,25 +557,40 @@ class OBJDetectInference():
             # compute metrics
             del test_inputs
             torch.cuda.empty_cache()
+            pred_boxes=[
+                    test_data_i[detector.target_box_key].cpu().detach().numpy() for test_data_i in test_outputs_all
+                ]
+            pred_classes=[
+                    test_data_i[detector.target_label_key].cpu().detach().numpy() for test_data_i in test_outputs_all
+                ]
+            pred_scores=[
+                    test_data_i[detector.pred_score_key].cpu().detach().numpy() for test_data_i in test_outputs_all
+                ]
+            gt_boxes=[test_data_i[detector.target_box_key].cpu().detach().numpy() for test_data_i in test_targets_all]
+            gt_classes=[
+                    test_data_i[detector.target_label_key].cpu().detach().numpy() for test_data_i in test_targets_all
+                ]
             results_metric = matching_batch(
                 iou_fn=box_utils.box_iou,
                 iou_thresholds=metric.iou_thresholds,
-                pred_boxes=[
-                    test_data_i[detector.target_box_key].cpu().detach().numpy() for test_data_i in test_outputs_all
-                ],
-                pred_classes=[
-                    test_data_i[detector.target_label_key].cpu().detach().numpy() for test_data_i in test_outputs_all
-                ],
-                pred_scores=[
-                    test_data_i[detector.pred_score_key].cpu().detach().numpy() for test_data_i in test_outputs_all
-                ],
-                gt_boxes=[test_data_i[detector.target_box_key].cpu().detach().numpy() for test_data_i in test_targets_all],
-                gt_classes=[
-                    test_data_i[detector.target_label_key].cpu().detach().numpy() for test_data_i in test_targets_all
-                ],
+                pred_boxes=pred_boxes,
+                pred_classes=pred_classes,
+                pred_scores=pred_scores,
+                gt_boxes=gt_boxes,
+                gt_classes=gt_classes,
             )
             test_metric_dict = metric(results_metric)[0]
+            print('Metric result:')
             print(test_metric_dict)
+            print('Utils metric mAP')
+            print(mAP_with_IoU(pred_boxes,pred_classes,pred_scores,gt_boxes,gt_classes,classes=["nodule"],max_detection=[100]))
+            print('Utils metric mAR')
+            print(mAR_with_IoU(pred_boxes,pred_classes,pred_scores,gt_boxes,gt_classes,classes=["nodule"],max_detection=[100]))
+            print('Utils metric AP@IoU0.1')
+            print(AP_at_IoU(pred_boxes,pred_classes,pred_scores,gt_boxes,gt_classes,classes=["nodule"],iou_list=[0.1],max_detection=[100]))
+            print('Utils metric AP@IoU0.25/0.5')
+            print(AP_at_IoU(pred_boxes,pred_classes,pred_scores,gt_boxes,gt_classes,classes=["nodule"],iou_list=[0.25,0.5],max_detection=[100]))
+            
             end_time = time.time()
             print("Testing time: ", end_time - start_time)
 
