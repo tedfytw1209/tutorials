@@ -585,6 +585,7 @@ class OBJDetectInference():
             print(test_metric_dict)
             print('Utils metric mAP')
             print(mAP_with_IoU(pred_boxes,pred_classes,pred_scores,gt_boxes,gt_classes,classes=["nodule"],max_detection=[100]))
+            #coco_metric = COCOMetric(classes=["nodule"], iou_list=[0.1], max_detection=[100])
             print('Utils metric mAR')
             print(mAR_with_IoU(pred_boxes,pred_classes,pred_scores,gt_boxes,gt_classes,classes=["nodule"],max_detection=[100]))
             print('Utils metric AP@IoU0.1')

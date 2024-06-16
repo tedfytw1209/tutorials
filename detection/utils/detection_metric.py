@@ -35,7 +35,7 @@ def mAP_with_IoU(
     Return:
         mAP  and per class mAP result with IoU ranges (Dict[str, float])
     '''
-    coco_metric = COCOMetric(classes=classes, iou_range=iou_range) #iou_list not need for mAP
+    coco_metric = COCOMetric(classes=classes, iou_range=iou_range, iou_list=[0.1], max_detection=max_detection) #iou_list not need for mAP
     results_metric = matching_batch(
                     iou_fn=box_utils.box_iou,
                     iou_thresholds=coco_metric.iou_thresholds,
@@ -131,7 +131,7 @@ def mAR_with_IoU(
     Return:
         mAP  and per class mAP result with IoU ranges (Dict[str, float])
     '''
-    coco_metric = COCOMetric(classes=classes, iou_range=iou_range) #iou_list not need for mAP
+    coco_metric = COCOMetric(classes=classes, iou_range=iou_range, iou_list=[0.1], max_detection=max_detection) #iou_list not need for mAP
     results_metric = matching_batch(
                     iou_fn=box_utils.box_iou,
                     iou_thresholds=coco_metric.iou_thresholds,
