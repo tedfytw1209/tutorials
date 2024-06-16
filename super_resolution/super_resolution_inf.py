@@ -48,12 +48,14 @@ from monai.apps.detection.networks.retinanet_network import (
     resnet_fpn_feature_extractor,
 )
 from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape,AnchorGenerator
-from monai.data import DataLoader, Dataset, box_utils, load_decathlon_datalist
+from monai.data import DataLoader, Dataset, box_utils
 from monai.data.utils import no_collation
 from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
+from dataset.load_dataset import load_mednist_datalist
+from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms
 
 def print_network_params(params, show_grad=True):
     v_n,v_v,v_g = [],[],[]
@@ -126,53 +128,11 @@ class SuperResolutionInference():
             setattr(class_args, k, v)
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
-        intensity_transform = ScaleIntensityRanged(
-            keys=["image"],
-            a_min=-1024,
-            a_max=300.0,
-            b_min=0.0,
-            b_max=1.0,
-            clip=True,
-        )
-        if class_args.spatial_dims==3:
-            train_transforms_func = generate_detection_train_transform
-            val_transforms_func = generate_detection_val_transform
-        elif class_args.spatial_dims==2:
-            train_transforms_func = generate_detection_train_transform_2d
-            val_transforms_func = generate_detection_val_transform_2d
-        else:
-            raise('Error: no transform for spatial_dims==', class_args.spatial_dims)
-        
-        train_transforms = train_transforms_func(
-            "image",
-            "box",
-            "label",
-            class_args.gt_box_mode,
-            intensity_transform,
-            class_args.patch_size,
-            class_args.batch_size,
-            affine_lps_to_ras=True,
-            amp=amp,
-        )
-        val_transforms = val_transforms_func(
-            "image",
-            "box",
-            "label",
-            class_args.gt_box_mode,
-            intensity_transform,
-            affine_lps_to_ras=True,
-            amp=amp,
-        )
+
+        train_transforms = generate_mednist_train_transforms()
+        val_transforms = generate_mednist_validation_transforms()
         # Use val transform
-        inference_transforms = val_transforms_func(
-            "image",
-            "box",
-            "label",
-            class_args.gt_box_mode,
-            intensity_transform,
-            affine_lps_to_ras=True,
-            amp=amp,
-        )
+        inference_transforms = generate_mednist_validation_transforms()
         # 2. prepare training data
         self.make_datasets(class_args,train_transforms,val_transforms,inference_transforms)
 
@@ -186,7 +146,7 @@ class SuperResolutionInference():
         self.model_name = config_dict.get('model',"retinanet")
     
     def make_datasets(self,class_args,train_transforms,val_transforms,inference_transforms):
-        train_data = load_decathlon_datalist(
+        train_data = load_mednist_datalist(
             class_args.data_list_file_path,
             is_segmentation=True,
             data_list_key="training",
