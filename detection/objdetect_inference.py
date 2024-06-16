@@ -523,6 +523,7 @@ class OBJDetectInference():
             print(f"Load model from {self.env_dict['model_path']}")
         else:
             print(f"Use model from function args")
+        print_network_params(net.named_parameters(),show_grad=False)
 
         # 3) build detector (!changed to validation like detector)
         detector = self.build_detector(net,anchor_generator,device,train=False,valid=True)
