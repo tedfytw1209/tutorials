@@ -718,7 +718,7 @@ class OBJDetectInference():
     
     #retinanet
     def build_retinanet_detector(self,net,anchor_generator,device,train=True,valid=True):
-        detector = RetinaNetDetector_debug(network=net, anchor_generator=anchor_generator, debug=self.verbose).to(device)
+        detector = RetinaNetDetector_debug(network=net, anchor_generator=anchor_generator, debug=self.verbose, spatial_dims=self.spatial_dims).to(device)
         #!!! need ask consider image mean and std or not?
         # set training components
         if train:
