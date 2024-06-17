@@ -50,12 +50,28 @@ class Lazy_Autoencoder(nn.Module):
     def __init__(self,
         encoder: nn.Module,
         decoder: nn.Module,
+        latent_img_shape: Sequence[int],
     ):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
+        self.latent_img_shape = latent_img_shape
     
-    def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor) -> Tensor:
+        """forward
+
+        Args:
+            x (tensor): Input image with shape (B, C, H, W, D) or (B, C, H, W)
+
+        Returns:
+            Output x: Output super resolution image with shape (B, C, H, W, D) or (B, C, H, W)
+        """
+        latent, _ = self.encoder(x) #latent: (B,HW,C)
+        latent_x = latent.transpose(1,2).reshape(self.latent_img_shape) #(B,HW,C)->(B,C,HW)->(B,C,H,W)
+        out_img = self.decoder(latent_x)
+        return out_img
+    
+    def forward_with_latent(self, x: Tensor) -> tuple[Tensor, Tensor]:
         """forward
 
         Args:
@@ -66,7 +82,8 @@ class Lazy_Autoencoder(nn.Module):
             Output lantent: Output latent feature with shape (B,HW,C)
         """
         latent, _ = self.encoder(x)
-        out_img = self.decoder(latent)
+        latent_x = latent.transpose(1,2).reshape(self.latent_img_shape) #(B,HW,C)->(B,C,HW)->(B,C,H,W)
+        out_img = self.decoder(latent_x)
         return out_img, latent
     
 class Conv_decoder(nn.Module):

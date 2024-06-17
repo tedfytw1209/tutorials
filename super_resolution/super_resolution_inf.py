@@ -154,8 +154,6 @@ class SuperResolutionInference():
     
     def make_train_datasets(self,class_args,train_transforms,val_transforms):
         train_data = load_mednist_datalist(
-            class_args.data_list_file_path,
-            is_segmentation=True,
             data_list_key="training",
             base_dir=class_args.data_base_dir,
         )
@@ -192,8 +190,6 @@ class SuperResolutionInference():
     def make_test_datasets(self,class_args,inference_transforms):
         #create a inference data loader
         inference_data = load_mednist_datalist(
-            class_args.data_list_file_path,
-            is_segmentation=True,
             data_list_key="validation",
             base_dir=class_args.data_base_dir,
         )
@@ -462,19 +458,23 @@ class SuperResolutionInference():
     #build Network
     def build_net(self):
         encoder, decoder = self.build_encoder_decoder()
+        total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
+        latent_size = int(self.args.img_size / total_scale_factor)
         print('#'*20)
         print('Build Encoder Network with structure:')
         print_network_params(encoder.named_parameters(),show_grad=False)
         print('#'*20)
         print('Build Decoder Network with structure:')
         print_network_params(decoder.named_parameters(),show_grad=False)
-        net = Lazy_Autoencoder(encoder,decoder)
+        latent_shape = [-1, 1] + [latent_size for i in range(self.args.spatial_dims)]
+        net = Lazy_Autoencoder(encoder,decoder, latent_img_shape=latent_shape)
         net = torch.jit.script(net)
         return net
     
     #vitdet
     def build_encoder_decoder(self):
         model_spatial_dims = self.args.spatial_dims
+        total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
         # Parameter settings are in config.json file
         encoder = ViT(
                 in_channels=self.args.n_input_channels, #input channel
@@ -491,7 +491,7 @@ class SuperResolutionInference():
         decoder = Conv_decoder(
             in_channels=self.args.embed_dim,
             out_channels=1,
-            scale_factor=self.args.scale_factor * self.args.model_patch_size, # 4*16 in mednist
+            scale_factor=total_scale_factor, # 4*16 in mednist
             conv_bias=True,
             use_layer_norm=True,
             )
