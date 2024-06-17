@@ -127,6 +127,16 @@ class OBJDetectInference():
             setattr(class_args, k, v)
         for k, v in config_dict.items():
             setattr(class_args, k, v)
+
+        #store to self
+        self.env_dict, self.config_dict = env_dict, config_dict
+        self.args = class_args
+        self.verbose = verbose
+        self.amp = amp
+        self.use_train = debug_dict.get('use_train',True)
+        self.use_test = debug_dict.get('use_test',True)
+        self.model_name = config_dict.get('model',"retinanet")
+        
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
         intensity_transform = ScaleIntensityRanged(
@@ -146,7 +156,8 @@ class OBJDetectInference():
         else:
             raise('Error: no transform for spatial_dims==', class_args.spatial_dims)
         
-        train_transforms = train_transforms_func(
+        if self.use_train:
+            train_transforms = train_transforms_func(
             "image",
             "box",
             "label",
@@ -156,8 +167,8 @@ class OBJDetectInference():
             class_args.batch_size,
             affine_lps_to_ras=True,
             amp=amp,
-        )
-        val_transforms = val_transforms_func(
+            )
+            val_transforms = val_transforms_func(
             "image",
             "box",
             "label",
@@ -165,9 +176,13 @@ class OBJDetectInference():
             intensity_transform,
             affine_lps_to_ras=True,
             amp=amp,
-        )
-        # Use val transform
-        inference_transforms = val_transforms_func(
+            )
+            # prepare data
+            self.make_train_datasets(class_args,train_transforms,val_transforms)
+        
+        if self.use_test:
+            # Use val transform
+            inference_transforms = val_transforms_func(
             "image",
             "box",
             "label",
@@ -175,20 +190,11 @@ class OBJDetectInference():
             intensity_transform,
             affine_lps_to_ras=True,
             amp=amp,
-        )
-        # 2. prepare training data
-        self.make_datasets(class_args,train_transforms,val_transforms,inference_transforms)
-
-        #store to self
-        self.env_dict, self.config_dict = env_dict, config_dict
-        self.args = class_args
-        self.verbose = verbose
-        self.amp = amp
-        self.use_train = debug_dict.get('use_train',True)
-        self.use_test = debug_dict.get('use_test',True)
-        self.model_name = config_dict.get('model',"retinanet")
+            )
+            # prepare data
+            self.make_test_datasets(class_args,inference_transforms)
     
-    def make_datasets(self,class_args,train_transforms,val_transforms,inference_transforms):
+    def make_train_datasets(self,class_args,train_transforms,val_transforms):
         train_data = load_decathlon_datalist(
             class_args.data_list_file_path,
             is_segmentation=True,
@@ -222,7 +228,10 @@ class OBJDetectInference():
             collate_fn=no_collation,
             persistent_workers=True,
         )
-
+        self.train_ds, self.val_ds = train_ds, val_ds
+        self.train_loader, self.val_loader = train_loader, val_loader
+    
+    def make_test_datasets(self,class_args,inference_transforms):
         #create a inference data loader
         inference_data = load_decathlon_datalist(
             class_args.data_list_file_path,
@@ -241,8 +250,8 @@ class OBJDetectInference():
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
         )
-        self.train_ds, self.val_ds, self.inference_ds = train_ds, val_ds, inference_ds
-        self.train_loader, self.val_loader, self.inference_loader = train_loader, val_loader, inference_loader
+        self.inference_ds = inference_ds
+        self.inference_loader = inference_loader
 
     def __call__(self, *args: Any, **kwargs: Any):
         """
