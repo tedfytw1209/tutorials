@@ -46,6 +46,15 @@ def visualize_image(image):
     
     return draw_img
 
-### !!! not impl
 def visualize_image_tf(image):
-    pass
+    """
+    Visualize an image for debug
+
+    Args:
+        image: image numpy array, sized (C, H, W)
+    """
+    # draw image
+    draw_img = normalize_image_to_uint8(image)
+    draw_img = cv2.cvtColor(draw_img, cv2.COLOR_GRAY2BGR)
+    
+    return draw_img

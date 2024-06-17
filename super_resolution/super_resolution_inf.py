@@ -255,7 +255,7 @@ class SuperResolutionInference():
         compute_results['infer_test'] = test_results
         return compute_results
     #3. train
-    def train(self, anchor_generator, metric, device, pre_net=None):
+    def train(self, metric, device, pre_net=None):
         """
         Training with the `network` pretrained-model (or not).
         1. First build the model and load pre-trained-model
@@ -270,7 +270,7 @@ class SuperResolutionInference():
             dict: dictionary with values for evaluation (include metric in train and test)
         """
         # 1-2. build network & load pre-train network
-        net = self.build_net(anchor_generator)
+        net = self.build_net()
         #1-3. load pre-train network !
         if pre_net!=None:
             print('Loaded pretrained model:')
@@ -374,7 +374,7 @@ class SuperResolutionInference():
                         # save outputs for evaluation
                         val_outputs_all += val_outputs
                         val_targets_all += val_targets
-                        loss = loss_func(val_inputs, val_targets)
+                        loss = metric(val_inputs, val_targets)
                         epoch_val_loss += loss.detach().item()
                         step += 1
 
@@ -382,11 +382,10 @@ class SuperResolutionInference():
                 print(f"Validation time: {end_time-start_time}s")
 
                 # visualize an inference image and boxes to tensorboard
-                draw_img = draw_func(
-                    ori_image=val_inputs[0][0, ...].cpu().detach().numpy(),
-                    image=val_outputs[0][0, ...].cpu().detach().numpy(),
-                )
-                tensorboard_writer.add_image("val_img", draw_img.transpose([2, 1, 0]), epoch + 1)
+                draw_img_ori = draw_func(val_targets[0].cpu().detach().numpy())
+                draw_img = draw_func(val_outputs[0].cpu().detach().numpy())
+                tensorboard_writer.add_image("val_output_img", draw_img.transpose([2, 1, 0]), epoch + 1)
+                tensorboard_writer.add_image("val_origin_img", draw_img_ori.transpose([2, 1, 0]), epoch + 1)
 
                 # compute metrics
                 del val_inputs
@@ -413,7 +412,7 @@ class SuperResolutionInference():
         tensorboard_writer.close()
     
     #4. Test
-    def test(self, anchor_generator, metric, device,net=None):
+    def test(self, metric, device,net=None):
         # 2) build test network
         if net==None:
             net = torch.jit.load(self.env_dict["model_path"]).to(device)
@@ -421,8 +420,6 @@ class SuperResolutionInference():
         else:
             print(f"Use model from function args")
 
-        loss_func = self.get_loss_func()
-        draw_func = visualize_image_tf
         ###! use mscoco evaluation metric noe, mAP,mAR
         # 4. apply trained model
         net.eval()
@@ -445,7 +442,7 @@ class SuperResolutionInference():
                 # save outputs for evaluation
                 test_outputs_all += test_outputs
                 test_targets_all += test_targets
-                loss = loss_func(test_inputs, test_targets)
+                loss = metric(test_inputs, test_targets)
                 epoch_test_loss += loss.detach().item()
                 step += 1
 
