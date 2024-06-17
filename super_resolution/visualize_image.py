@@ -45,3 +45,7 @@ def visualize_image(image):
     ax[1].axis("off")
     
     return draw_img
+
+### !!! not impl
+def visualize_image_tf(image):
+    pass

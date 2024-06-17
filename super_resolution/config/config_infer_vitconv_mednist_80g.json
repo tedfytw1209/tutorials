@@ -1,0 +1,17 @@
+{
+	"model": "vit",
+	"lr": 1e-2,
+	"finetune_epochs": 100,
+	"val_interval": 5,
+	"batch_size": 16,
+	"n_input_channels": 1,
+	"spatial_dims": 2,
+	"embed_dim" : 768,
+	"depth" : 12,
+	"num_heads" : 12,
+	"img_size": 64, 
+	"out_channels": 256,
+	"model_patch_size": 16, 
+	"mlp_dim" : 3072,
+    "scale_factor": 4
+}

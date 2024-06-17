@@ -16,6 +16,35 @@ from monai.networks.blocks.mlp import MLPBlock
 from monai.utils import optional_import
 from monai.networks.nets import ViT
 
+class LayerNorm(nn.Module):
+    """
+    A LayerNorm variant, popularized by Transformers, that performs point-wise mean and
+    variance normalization over the channel dimension for inputs that have shape
+    (batch_size, channels, height, width).
+    https://github.com/facebookresearch/ConvNeXt/blob/d1fa8f6fef0a165b27399986cc2bdacc92777e40/models/convnext.py#L119  # noqa B950
+    """
+
+    def __init__(self, normalized_shape: int, eps: float=1e-6):
+        super().__init__()
+        self.weight = nn.Parameter(torch.empty(normalized_shape))
+        self.bias = nn.Parameter(torch.empty(normalized_shape))
+        self.eps = eps
+        self.normalized_shape = (normalized_shape,)
+        self.reset_parameters() #self initialize
+
+    def forward(self, x):
+        #print('Layer Norm input shape: ', x.shape)
+        u = x.detach().mean(1, keepdim=True)
+        s = (x.detach() - u).pow(2).mean(1, keepdim=True)
+        x = (x - u) / (torch.sqrt(s + self.eps) + self.eps)
+        #print('Layer Norm before wx+b shape: ', x.shape)
+        x = self.weight[:, None, None] * x + self.bias[:, None, None]
+        #print('Layer Norm output shape: ', x.shape, 'wieght: ', self.weight.shape, 'bias: ', self.bias.shape)
+        return x
+
+    def reset_parameters(self) -> None:
+        init.ones_(self.weight)
+        init.zeros_(self.bias)
 
 class Lazy_Autoencoder(nn.Module):
     def __init__(self,
@@ -45,23 +74,38 @@ class Conv_decoder(nn.Module):
         in_channels: int,
         out_channels: int,
         scale_factor: int,
-        conv_block: str ='default',
-        apply_pad_pool: bool = True,
         conv_bias: bool = True,
         use_layer_norm: bool = True,
         act_func: nn.Module = nn.GELU,
     ):
         super().__init__()
+        if use_layer_norm:
+            norm_func = LayerNorm
+        else:
+            norm_func = nn.Identity
+        
         scale_factor_pow = int(math.log2(scale_factor)) #2^x of scale factor
-        self.stages = nn.ModuleList()
+        stages = []
         scale_w = scale_factor
         hidden_num = in_channels
         for stage in range(scale_factor_pow-1):
-            hidden_num = max(hidden_num/2, 16) 
-            pass
-        last_conv = nn.ConvTranspose2d(hidden_num, out_channels=out_channels, kernel_size=2, stride=2)
-        self.stages.append(last_conv)
-            
+            hidden_num_out = max(hidden_num/2, 16) 
+            layers = [
+                    nn.ConvTranspose2d(hidden_num, hidden_num_out, kernel_size=2, stride=2, bias=conv_bias),
+                    norm_func(hidden_num_out,eps=1e-5),
+                    act_func(),
+                    ]
+            stages.extend(layers)
+            hidden_num = hidden_num_out
+            scale_w = max(hidden_num/2, 1) 
+        last_conv = nn.ConvTranspose2d(hidden_num, out_channels, kernel_size=2, stride=2, bias=conv_bias)
+        stages.append(last_conv)
+        self.stages = nn.Sequential(*stages)
         
     def forward(self, x: Tensor) -> Tensor:
-        pass
+        out = self.stages(x)
+        return out
+
+###!!! not implement now
+class UNETR_decoder(nn.Module):
+    pass

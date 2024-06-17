@@ -16,7 +16,7 @@ from monai.config.type_definitions import NdarrayOrTensor
 from monai import transforms
 
 def generate_mednist_train_transforms():
-    image_size = 64
+    image_size = 64 #scale factor=4
     train_transforms = transforms.Compose(
     [
         transforms.LoadImaged(keys=["image"]),
