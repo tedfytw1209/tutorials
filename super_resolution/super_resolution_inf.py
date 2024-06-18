@@ -248,7 +248,7 @@ class SuperResolutionInference():
             dict: dictionary with values for evaluation (include metric in train and test)
         """
         # 1-2. build network & load pre-train network
-        net = self.build_net()
+        net = self.build_net().to(device)
         #1-3. load pre-train network !
         if pre_net!=None:
             print('Loaded pretrained model:')
@@ -282,7 +282,7 @@ class SuperResolutionInference():
             for batch_data in self.train_loader:
                 step += 1
                 #flatten targets per image and images per batch
-                print(batch_data)
+                #print(batch_data)
                 inputs = batch_data["low_res_image"].to(device)
                 targets = batch_data["image"].to(device)
 
