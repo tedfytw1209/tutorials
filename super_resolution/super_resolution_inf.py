@@ -184,7 +184,6 @@ class SuperResolutionInference():
             batch_size=1,
             num_workers=4,
             pin_memory=torch.cuda.is_available(),
-            collate_fn=no_collation,
         )
         self.inference_ds = inference_ds
         self.inference_loader = inference_loader
