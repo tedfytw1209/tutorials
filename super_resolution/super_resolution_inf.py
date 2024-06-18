@@ -449,7 +449,7 @@ class SuperResolutionInference():
         print('#'*20)
         print('Build Decoder Network with structure:')
         print_network_params(decoder.named_parameters(),show_grad=False)
-        latent_shape = [-1, 1] + [latent_size for i in range(self.args.spatial_dims)]
+        latent_shape = [-1, self.args.embed_dim] + [latent_size for i in range(self.args.spatial_dims)]
         net = Lazy_Autoencoder(encoder,decoder, latent_img_shape=latent_shape)
         net = torch.jit.script(net)
         return net
@@ -458,10 +458,11 @@ class SuperResolutionInference():
     def build_encoder_decoder(self):
         model_spatial_dims = self.args.spatial_dims
         total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
+        low_resol_img_size = int(self.args.img_size // self.args.scale_factor)
         # Parameter settings are in config.json file
         encoder = ViT(
                 in_channels=self.args.n_input_channels, #input channel
-                img_size=self.args.img_size,
+                img_size=low_resol_img_size,
                 patch_size=self.args.model_patch_size,
                 hidden_size=self.args.embed_dim,
                 mlp_dim=self.args.mlp_dim,

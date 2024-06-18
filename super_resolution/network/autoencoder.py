@@ -49,6 +49,7 @@ class Lazy_Autoencoder(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.latent_img_shape = latent_img_shape
+        print('Reshape latent to ', self.latent_img_shape)
     
     def forward(self, x: Tensor) -> Tensor:
         """forward
