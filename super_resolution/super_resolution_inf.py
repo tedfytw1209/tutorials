@@ -363,8 +363,8 @@ class SuperResolutionInference():
                 print(f"Validation time: {end_time-start_time}s")
 
                 # visualize an inference image and boxes to tensorboard
-                draw_img_ori = draw_func(val_targets[0].cpu().detach().numpy())
-                draw_img = draw_func(val_outputs[0].cpu().detach().numpy())
+                draw_img_ori = draw_func(val_targets[0].permute(1,2,0).cpu().detach().numpy())
+                draw_img = draw_func(val_outputs[0].permute(1,2,0).cpu().detach().numpy())
                 tensorboard_writer.add_image("val_output_img", draw_img.transpose([2, 1, 0]), epoch + 1)
                 tensorboard_writer.add_image("val_origin_img", draw_img_ori.transpose([2, 1, 0]), epoch + 1)
 
