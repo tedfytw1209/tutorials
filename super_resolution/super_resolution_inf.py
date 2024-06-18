@@ -113,6 +113,15 @@ class SuperResolutionInference():
             setattr(class_args, k, v)
         for k, v in config_dict.items():
             setattr(class_args, k, v)
+        
+        #store to self
+        self.env_dict, self.config_dict = env_dict, config_dict
+        self.args = class_args
+        self.verbose = verbose
+        self.amp = amp
+        self.use_train = debug_dict.get('use_train',True)
+        self.use_test = debug_dict.get('use_test',True)
+        self.model_name = config_dict.get('model',"retinanet")
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
         
@@ -126,15 +135,6 @@ class SuperResolutionInference():
         
         if self.use_test:
             self.make_test_datasets(class_args,inference_transforms)
-
-        #store to self
-        self.env_dict, self.config_dict = env_dict, config_dict
-        self.args = class_args
-        self.verbose = verbose
-        self.amp = amp
-        self.use_train = debug_dict.get('use_train',True)
-        self.use_test = debug_dict.get('use_test',True)
-        self.model_name = config_dict.get('model',"retinanet")
     
     def make_train_datasets(self,class_args,train_transforms,val_transforms):
         train_data = load_mednist_datalist(

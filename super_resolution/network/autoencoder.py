@@ -9,13 +9,6 @@ from torch import Tensor, nn
 from torch.nn import init
 import torch.nn.functional as F
 
-from timm.models.layers import DropPath
-
-from monai.networks.blocks.patchembedding import PatchEmbeddingBlock
-from monai.networks.blocks.mlp import MLPBlock
-from monai.utils import optional_import
-from monai.networks.nets import ViT
-
 class LayerNorm(nn.Module):
     """
     A LayerNorm variant, popularized by Transformers, that performs point-wise mean and
