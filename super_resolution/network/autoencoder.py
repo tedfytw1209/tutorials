@@ -95,7 +95,7 @@ class Conv_decoder(nn.Module):
             norm_func = nn.Identity
         
         scale_factor_pow = int(math.log2(scale_factor)) #2^x of scale factor
-        stages = []
+        self.stages = nn.ModuleList()
         scale_w = scale_factor
         hidden_num = in_channels
         for stage in range(scale_factor_pow-1):
@@ -105,16 +105,17 @@ class Conv_decoder(nn.Module):
                     norm_func(hidden_num_out,eps=1e-5),
                     act_func(),
                     ]
-            stages.extend(layers)
+            layers = nn.Sequential(*layers)
+            self.stages.append(layers)
             hidden_num = hidden_num_out
             scale_w = int(max(hidden_num//2, 1)) 
         last_conv = nn.ConvTranspose2d(hidden_num, out_channels, kernel_size=2, stride=2, bias=conv_bias)
-        stages.append(last_conv)
-        self.stages = nn.Sequential(*stages)
+        self.stages.append(last_conv)
         
     def forward(self, x: Tensor) -> Tensor:
-        out = self.stages(x)
-        return out
+        for stage in self.stages:
+            x = stage(x)
+        return x
 
 ###!!! not implement now
 class UNETR_decoder(nn.Module):

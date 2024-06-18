@@ -151,7 +151,6 @@ class SuperResolutionInference():
             shuffle=True,
             num_workers=7,
             pin_memory=torch.cuda.is_available(),
-            collate_fn=no_collation,
             persistent_workers=True,
         )
 
@@ -162,10 +161,9 @@ class SuperResolutionInference():
         )
         val_loader = DataLoader(
             val_ds,
-            batch_size=1,
+            batch_size=self.args.batch_size,
             num_workers=2,
             pin_memory=torch.cuda.is_available(),
-            collate_fn=no_collation,
             persistent_workers=True,
         )
         self.train_ds, self.val_ds = train_ds, val_ds
@@ -284,6 +282,7 @@ class SuperResolutionInference():
             for batch_data in self.train_loader:
                 step += 1
                 #flatten targets per image and images per batch
+                print(batch_data)
                 inputs = batch_data["low_res_image"].to(device)
                 targets = batch_data["image"].to(device)
 
