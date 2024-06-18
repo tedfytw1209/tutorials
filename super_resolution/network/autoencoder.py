@@ -99,7 +99,7 @@ class Conv_decoder(nn.Module):
         scale_w = scale_factor
         hidden_num = in_channels
         for stage in range(scale_factor_pow-1):
-            hidden_num_out = max(hidden_num/2, 16) 
+            hidden_num_out = int(max(hidden_num//2, 16))
             layers = [
                     nn.ConvTranspose2d(hidden_num, hidden_num_out, kernel_size=2, stride=2, bias=conv_bias),
                     norm_func(hidden_num_out,eps=1e-5),
@@ -107,7 +107,7 @@ class Conv_decoder(nn.Module):
                     ]
             stages.extend(layers)
             hidden_num = hidden_num_out
-            scale_w = max(hidden_num/2, 1) 
+            scale_w = int(max(hidden_num//2, 1)) 
         last_conv = nn.ConvTranspose2d(hidden_num, out_channels, kernel_size=2, stride=2, bias=conv_bias)
         stages.append(last_conv)
         self.stages = nn.Sequential(*stages)
