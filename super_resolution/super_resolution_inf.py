@@ -27,30 +27,14 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 from torch.nn.utils.clip_grad import clip_grad_norm_
-from generate_transforms import (
-    generate_detection_train_transform,
-    generate_detection_val_transform,
-    generate_detection_inference_transform,
-    generate_detection_train_transform_2d,
-    generate_detection_val_transform_2d
-)
 
 from torch.utils.tensorboard import SummaryWriter
-from visualize_image import visualize_one_xy_slice_in_3d_image,visualize_one_xy_slice_in_2d_image
 from warmup_scheduler import GradualWarmupScheduler
 
 import monai
-from monai.apps.detection.metrics.coco import COCOMetric
-from monai.apps.detection.metrics.matching import matching_batch
-#from monai.apps.detection.networks.retinanet_detector import RetinaNetDetector
-from monai.apps.detection.networks.retinanet_network import (
-    RetinaNet,
-    resnet_fpn_feature_extractor,
-)
-from monai.apps.detection.utils.anchor_utils import AnchorGeneratorWithAnchorShape,AnchorGenerator
-from monai.data import DataLoader, Dataset, box_utils
+
+from monai.data import DataLoader, Dataset
 from monai.data.utils import no_collation
-from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 from monai.networks.nets import ViT
 
