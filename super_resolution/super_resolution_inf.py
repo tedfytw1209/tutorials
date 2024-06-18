@@ -285,6 +285,8 @@ class SuperResolutionInference():
                 #print(batch_data)
                 inputs = batch_data["low_res_image"].to(device)
                 targets = batch_data["image"].to(device)
+                print('low res img shape: ', inputs.shape)
+                print('ori img shape: ',targets.shape)
 
                 optimizer.zero_grad(set_to_none=True)
                 #with torch.autograd.detect_anomaly(): #for debug
@@ -306,7 +308,7 @@ class SuperResolutionInference():
                     #print_network_params(detector.network.named_parameters())
                     #clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     optimizer.step()
-                
+                print('outputs shape: ', outputs.shape)
                 #raise('Stop and debug')
                 
                 # save to tensorboard
