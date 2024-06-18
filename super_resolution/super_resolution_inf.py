@@ -353,7 +353,7 @@ class SuperResolutionInference():
                         # save outputs for evaluation
                         val_outputs_all += val_outputs
                         val_targets_all += val_targets
-                        loss = metric(val_inputs, val_targets)
+                        loss = metric(val_outputs, val_targets)
                         epoch_val_loss += loss.detach().item()
                         step += 1
 
