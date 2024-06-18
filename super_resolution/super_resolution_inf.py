@@ -329,7 +329,7 @@ class SuperResolutionInference():
             tensorboard_writer.add_scalar("train_lr", optimizer.param_groups[0]["lr"], epoch + 1)
 
             # save last trained model
-            torch.jit.save(net.network, self.env_dict["model_path"][:-3] + "_last.pt")
+            torch.jit.save(net, self.env_dict["model_path"][:-3] + "_last.pt")
             print("saved last model")
 
             # ------------- Validation for model selection -------------
