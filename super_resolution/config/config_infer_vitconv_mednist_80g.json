@@ -11,7 +11,7 @@
 	"num_heads" : 12,
 	"img_size": 64, 
 	"out_channels": 256,
-	"model_patch_size": 16, 
+	"model_patch_size": 8, 
 	"mlp_dim" : 3072,
     "scale_factor": 4
 }

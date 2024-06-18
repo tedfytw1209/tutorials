@@ -291,7 +291,7 @@ class SuperResolutionInference():
                 if self.amp and (scaler is not None):
                     with torch.cuda.amp.autocast():
                         outputs = net(inputs)
-                        loss = loss_func(inputs, targets)
+                        loss = loss_func(outputs, targets)
                     #with torch.autograd.detect_anomaly(): #for debug
                     scaler.scale(loss).backward()
                     #print_network_params(detector.network.named_parameters())
@@ -300,7 +300,7 @@ class SuperResolutionInference():
                     scaler.update()
                 else:
                     outputs = net(inputs)
-                    loss = loss_func(inputs, targets)
+                    loss = loss_func(outputs, targets)
                     #with torch.autograd.detect_anomaly(): #for debug
                     loss.backward()
                     #print_network_params(detector.network.named_parameters())
@@ -421,7 +421,7 @@ class SuperResolutionInference():
                 # save outputs for evaluation
                 test_outputs_all += test_outputs
                 test_targets_all += test_targets
-                loss = metric(test_inputs, test_targets)
+                loss = metric(test_outputs, test_targets)
                 epoch_test_loss += loss.detach().item()
                 step += 1
 
