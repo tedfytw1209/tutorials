@@ -3,7 +3,7 @@
 	"lr": 1e-2,
 	"finetune_epochs": 100,
 	"val_interval": 5,
-	"batch_size": 16,
+	"batch_size": 128,
 	"n_input_channels": 1,
 	"spatial_dims": 2,
 	"embed_dim" : 768,
