@@ -37,7 +37,7 @@ from monai.data import DataLoader, Dataset
 from monai.data.utils import no_collation
 from monai.utils import set_determinism
 from monai.networks.nets import ViT
-
+from monai.losses import PatchAdversarialLoss, PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist
 from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms
@@ -218,7 +218,7 @@ class SuperResolutionInference():
         #1. build the model
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        metric = torch.nn.MSELoss()
+        metric = PerceptualLoss(spatial_dims=self.args.spatial_dims)
         train_results, test_results, compute_results = {},{},{}
         if self.use_train:
             train_results = self.train(metric=metric, pre_net=pretrain_network, device=device)
@@ -435,7 +435,7 @@ class SuperResolutionInference():
         epoch_test_loss /= step
         print(f"Test average loss: {epoch_test_loss:.4f}")
         
-        test_metric_dict = {'test_mse': epoch_test_loss}
+        test_metric_dict = {'test_loss': epoch_test_loss}
         with open(self.args.result_list_file_path, "w") as outfile:
             json.dump(test_metric_dict, outfile, indent=4)
             
@@ -497,7 +497,7 @@ class SuperResolutionInference():
         return optimizer, scheduler, scaler
     #loss func
     def get_loss_func(self):
-        loss = nn.MSELoss()
+        loss = PerceptualLoss(spatial_dims=self.args.spatial_dims)
         return loss
     
 def load_model(path=None,transform_func=None):

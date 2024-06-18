@@ -1,8 +1,8 @@
 {
 	"model": "vit",
-	"lr": 1e-2,
-	"finetune_epochs": 20,
-	"val_interval": 2,
+	"lr": 5e-5,
+	"finetune_epochs": 80,
+	"val_interval": 5,
 	"batch_size": 128,
 	"n_input_channels": 1,
 	"spatial_dims": 2,
