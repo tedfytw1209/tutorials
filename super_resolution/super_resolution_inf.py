@@ -30,7 +30,8 @@ from torch.nn.utils.clip_grad import clip_grad_norm_
 
 from torch.utils.tensorboard import SummaryWriter
 from warmup_scheduler import GradualWarmupScheduler
-from torcheval.metrics.image import PeakSignalNoiseRatio, StructuralSimilarity
+from torcheval.metrics.image import PeakSignalNoiseRatio
+from torcheval.metrics.image.ssim import StructuralSimilarity
 import monai
 
 from monai.data import DataLoader, Dataset
