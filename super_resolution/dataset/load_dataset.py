@@ -40,18 +40,11 @@ def load_brainTR_datalist(
 
 ### for eyeq dataset !!! not impl
 def load_eyeq_datalist(
-    data_list_file_path: PathLike,
-    is_segmentation: bool = True,
     data_list_key: str = "training",
     base_dir: PathLike | None = None,):
-    """Load image/label paths of decathlon challenge from JSON file
-
-    Json file is similar to what you get from http://medicaldecathlon.com/
-    Those dataset.json files
-
+    """Load image paths of eyeq challenge from dir
+    
     Args:
-        data_list_file_path: the path to the json file of datalist.
-        is_segmentation: whether the datalist is for segmentation task, default is True.
         data_list_key: the key to get a list of dictionary to be used, default is "training".
         base_dir: the base directory of the dataset, if None, use the datalist directory.
 
@@ -64,27 +57,21 @@ def load_eyeq_datalist(
     .. code-block::
 
         [
-            {'image': '/workspace/data/chest_19.nii.gz',  'label': 0},
-            {'image': '/workspace/data/chest_31.nii.gz',  'label': 1}
+            {'image': '/workspace/data/chest_19.jpg'},
+            {'image': '/workspace/data/chest_31.jpg'}
         ]
 
     """
-    '''data_list_file_path = Path(data_list_file_path)
-    if not data_list_file_path.is_file():
-        raise ValueError(f"Data list file {data_list_file_path} does not exist.")
-    with open(data_list_file_path) as json_file:
-        json_data = json.load(json_file)
-    if data_list_key not in json_data:
-        raise ValueError(f'Data list {data_list_key} not specified in "{data_list_file_path}".')
-    expected_data = json_data[data_list_key]
-    if data_list_key == "test" and not isinstance(expected_data[0], dict):
-        # decathlon datalist may save the test images in a list directly instead of dict
-        expected_data = [{"image": i} for i in expected_data]
+    if data_list_key=="training":
+        data_list = "train"
+    elif data_list_key=="validation":
+        data_list = "test"
+    path = os.path.join(base_dir,data_list)
+    a_images = os.listdir(path)
 
-    if base_dir is None:
-        base_dir = data_list_file_path.parent
+    expected_data = [{"image": os.path.join(path,fname)} for fname in a_images]
 
-    return _append_paths(base_dir, is_segmentation, expected_data)'''
+    return expected_data
 
 class brainTR(Dataset):
     def __init__(self, root_a):

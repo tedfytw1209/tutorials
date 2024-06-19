@@ -1,0 +1,6 @@
+{
+    "model_path": "/blue/bianjiang/tienyuchang/super_resol_model/model_eyeq.pt",
+    "data_base_dir": "/orange/bianjiang/tienyu/EyePACS",
+    "tfevent_path": "/blue/bianjiang/tienyuchang/super_resol/eyeq",
+    "result_list_file_path": "/blue/bianjiang/tienyuchang/result/result_eyeq.json"
+}

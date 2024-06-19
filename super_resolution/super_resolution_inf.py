@@ -124,11 +124,12 @@ class SuperResolutionInference():
         self.model_name = config_dict.get('model',"retinanet")
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
-        
-        train_transforms = generate_mednist_train_transforms()
-        val_transforms = generate_mednist_validation_transforms()
+        low_res_size = int(self.args.img_size // self.args.scale_factor)
+        turn2gray = (self.args.n_input_channels!=1)
+        train_transforms = generate_mednist_train_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
+        val_transforms = generate_mednist_validation_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
         # Use val transform
-        inference_transforms = generate_mednist_validation_transforms()
+        inference_transforms = generate_mednist_validation_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
         # 2. prepare training data
         if self.use_train:
             self.make_train_datasets(class_args,train_transforms,val_transforms)
@@ -256,7 +257,7 @@ class SuperResolutionInference():
 
         # 2. Initialize training
         # initlize optimizer, need different version for different setting
-        optimizer, scheduler, scaler = self.train_setting_mednist(net)
+        optimizer, scheduler, scaler = self.train_setting(net)
         loss_func = self.get_loss_func(device=device)
         # initialize tensorboard writer
         tensorboard_writer = SummaryWriter(self.args.tfevent_path)
@@ -484,11 +485,11 @@ class SuperResolutionInference():
         return encoder, decoder
 
     #training settings
-    def train_setting_mednist(self,net):
-        optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
+    def train_setting(self,net):
+        optimizer = torch.optim.Adam(net.parameters(), lr=self.args.lr)
         
-        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1) #150->10
-        scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=10, after_scheduler=after_scheduler)
+        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=0.1)
+        scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
         scaler = torch.cuda.amp.GradScaler() if self.amp else None
         
         optimizer.zero_grad()
