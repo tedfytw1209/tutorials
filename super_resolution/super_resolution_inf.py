@@ -218,7 +218,7 @@ class SuperResolutionInference():
         #1. build the model
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        metric = PerceptualLoss(spatial_dims=self.args.spatial_dims)
+        metric = PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device)
         train_results, test_results, compute_results = {},{},{}
         if self.use_train:
             train_results = self.train(metric=metric, pre_net=pretrain_network, device=device)
@@ -257,7 +257,7 @@ class SuperResolutionInference():
         # 2. Initialize training
         # initlize optimizer, need different version for different setting
         optimizer, scheduler, scaler = self.train_setting_mednist(net)
-        loss_func = self.get_loss_func()
+        loss_func = self.get_loss_func(device=device)
         # initialize tensorboard writer
         tensorboard_writer = SummaryWriter(self.args.tfevent_path)
         draw_func = visualize_image_tf
@@ -496,8 +496,8 @@ class SuperResolutionInference():
         
         return optimizer, scheduler, scaler
     #loss func
-    def get_loss_func(self):
-        loss = PerceptualLoss(spatial_dims=self.args.spatial_dims)
+    def get_loss_func(self,device):
+        loss = PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device)
         return loss
     
 def load_model(path=None,transform_func=None):
