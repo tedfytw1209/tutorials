@@ -48,7 +48,7 @@ def generate_mednist_train_transforms(image_size=64, lowres_img_size=16, to_gray
     if to_gray:
         add_process = ToGrayScale(keys=["image"])
     else:
-        add_process = Identityd()
+        add_process = Identityd(keys=["image"])
     train_transforms = transforms.Compose(
     [
         transforms.LoadImaged(keys=["image"]),
@@ -74,7 +74,7 @@ def generate_mednist_validation_transforms(image_size=64, lowres_img_size=16, to
     if to_gray:
         add_process = ToGrayScale(keys=["image"])
     else:
-        add_process = Identityd()
+        add_process = Identityd(keys=["image"])
     val_transforms = transforms.Compose(
         [
             transforms.LoadImaged(keys=["image"]),
