@@ -78,7 +78,7 @@ class SSIM():
 
     def __call__(self, outputs, targets):
         self.ssim.update(outputs, targets)
-        return self.psnr.compute()
+        return self.ssim.compute()
 
 class ToGrayScale(MapTransform):
     """
