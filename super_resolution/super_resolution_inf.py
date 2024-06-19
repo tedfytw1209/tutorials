@@ -30,8 +30,6 @@ from torch.nn.utils.clip_grad import clip_grad_norm_
 
 from torch.utils.tensorboard import SummaryWriter
 from warmup_scheduler import GradualWarmupScheduler
-from torcheval.metrics.image import PeakSignalNoiseRatio
-from torcheval.metrics.image.ssim import StructuralSimilarity
 import monai
 
 from monai.data import DataLoader, Dataset
@@ -41,7 +39,7 @@ from monai.networks.nets import ViT
 from monai.losses import PatchAdversarialLoss, PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist
-from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms
+from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms, PSNR, SSIM
 from network.autoencoder import Lazy_Autoencoder, Conv_decoder
 from visualize_image import visualize_image_tf
 
@@ -220,11 +218,9 @@ class SuperResolutionInference():
         #1. build the model
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         ## !! need handle different scale problem
-        psnr = PeakSignalNoiseRatio(data_range=1.0, device=device)
-        ssim = StructuralSimilarity(device=device)
         metric_dic = {
-            'PSNR': psnr.compute,
-            'SSIM': ssim.compute,
+            'PSNR': PSNR(data_range=1.0, device=device),
+            'SSIM': SSIM(device=device),
             }
         train_results, test_results, compute_results = {},{},{}
         if self.use_train:

@@ -20,6 +20,25 @@ from monai.transforms.transform import LazyTransform, MapTransform, Randomizable
 from monai.transforms import Identityd
 from torchvision.transforms.functional import rgb_to_grayscale
 
+from torcheval.metrics.image import PeakSignalNoiseRatio
+from torcheval.metrics.image.ssim import StructuralSimilarity
+
+class PSNR():
+    def __init__(self, data_range, device):
+        self.psnr = PeakSignalNoiseRatio(data_range=data_range, device=device)
+
+    def __call__(self, outputs, targets):
+        self.psnr.update(outputs, targets)
+        return self.psnr.compute()
+    
+class SSIM():
+    def __init__(self, device):
+        self.ssim = StructuralSimilarity(device=device)
+
+    def __call__(self, outputs, targets):
+        self.ssim.update(outputs, targets)
+        return self.psnr.compute()
+
 class ToGrayScale(MapTransform):
     """
     Dictionary-based wrapper that turn RGB image to gray scale
