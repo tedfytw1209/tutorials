@@ -46,14 +46,14 @@ class ToGrayScale(MapTransform):
 
 def generate_mednist_train_transforms(image_size=64, lowres_img_size=16, to_gray=False):
     if to_gray:
-        add_process = ToGrayScale(keys=["image"])
+        add_process = ToGrayScale
     else:
-        add_process = Identityd(keys=["image"])
+        add_process = Identityd
     train_transforms = transforms.Compose(
     [
         transforms.LoadImaged(keys=["image"]),
         transforms.EnsureChannelFirstd(keys=["image"]),
-        add_process,
+        add_process(keys=["image"]),
         transforms.ScaleIntensityRanged(keys=["image"], a_min=0.0, a_max=255.0, b_min=0.0, b_max=1.0, clip=True),
         transforms.RandAffined(
             keys=["image"],
@@ -72,14 +72,14 @@ def generate_mednist_train_transforms(image_size=64, lowres_img_size=16, to_gray
 
 def generate_mednist_validation_transforms(image_size=64, lowres_img_size=16, to_gray=False):
     if to_gray:
-        add_process = ToGrayScale(keys=["image"])
+        add_process = ToGrayScale
     else:
-        add_process = Identityd(keys=["image"])
+        add_process = Identityd
     val_transforms = transforms.Compose(
         [
             transforms.LoadImaged(keys=["image"]),
             transforms.EnsureChannelFirstd(keys=["image"]),
-            add_process,
+            add_process(keys=["image"]),
             transforms.ScaleIntensityRanged(keys=["image"], a_min=0.0, a_max=255.0, b_min=0.0, b_max=1.0, clip=True),
             transforms.Resized(keys=["image"], spatial_size=(image_size, image_size)),
             transforms.CopyItemsd(keys=["image"], times=1, names=["low_res_image"]),
