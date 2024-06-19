@@ -220,7 +220,6 @@ class SuperResolutionInference():
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         ## !! need handle different scale problem
         metric_dic = {
-            'perceptual_loss': PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device),
             'PSNR': PeakSignalNoiseRatio(data_range=1.0, device=device),
             'SSIM': StructuralSimilarity(device=device),
             }
@@ -262,7 +261,7 @@ class SuperResolutionInference():
         # 2. Initialize training
         # initlize optimizer, need different version for different setting
         optimizer, scheduler, scaler = self.train_setting(net)
-        loss_func = self.get_loss_func(device=device)
+        loss_func_dic = self.get_loss_func_dic(device=device)
         # initialize tensorboard writer
         tensorboard_writer = SummaryWriter(self.args.tfevent_path)
         draw_func = visualize_image_tf
@@ -279,6 +278,7 @@ class SuperResolutionInference():
             print(f"epoch {epoch + 1}/{max_epochs}")
             net.train()
             epoch_loss = 0
+            each_loss_dic = {k:0 for k in loss_func_dic.keys()}
             step = 0
             start_time = time.time()
             scheduler.step()
@@ -294,10 +294,18 @@ class SuperResolutionInference():
 
                 optimizer.zero_grad(set_to_none=True)
                 #with torch.autograd.detect_anomaly(): #for debug
+                loss = 0
+                losses_num = 0
+                
                 if self.amp and (scaler is not None):
                     with torch.cuda.amp.autocast():
                         outputs = net(inputs)
-                        loss = loss_func(outputs, targets)
+                        for k,loss_func in loss_func_dic.items():
+                            each_loss = loss_func(outputs, targets)
+                            loss += each_loss
+                            each_loss_dic[k] = each_loss.detach().cpu().item()
+                            losses_num+=1
+                        loss = loss / losses_num
                     #with torch.autograd.detect_anomaly(): #for debug
                     scaler.scale(loss).backward()
                     #print_network_params(detector.network.named_parameters())
@@ -306,7 +314,12 @@ class SuperResolutionInference():
                     scaler.update()
                 else:
                     outputs = net(inputs)
-                    loss = loss_func(outputs, targets)
+                    for k,loss_func in loss_func_dic.items():
+                        each_loss = loss_func(outputs, targets)
+                        loss += each_loss
+                        each_loss_dic[k] = each_loss.detach().cpu().item()
+                        losses_num+=1
+                    loss = loss / losses_num
                     #with torch.autograd.detect_anomaly(): #for debug
                     loss.backward()
                     #print_network_params(detector.network.named_parameters())
@@ -317,7 +330,7 @@ class SuperResolutionInference():
                 
                 # save to tensorboard
                 epoch_loss += loss.detach().item()
-                print(f"{step}/{epoch_len}, train_loss: {loss.item():.4f}")
+                print(f"{step}/{epoch_len}, train_loss: {loss.detach().item():.4f}")
                 tensorboard_writer.add_scalar("train_loss", loss.detach().item(), epoch_len * epoch + step)
                 #tmp
                 #raise('Stop Training for debug')
@@ -330,9 +343,14 @@ class SuperResolutionInference():
 
             # save to tensorboard
             epoch_loss /= step
+            for k in each_loss_dic.keys():
+                each_loss_dic[k] /= step
             print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
             tensorboard_writer.add_scalar("avg_train_loss", epoch_loss, epoch + 1)
             tensorboard_writer.add_scalar("train_lr", optimizer.param_groups[0]["lr"], epoch + 1)
+            print(', '.join([f'{k} loss: {v:.4f}' for k,v in each_loss_dic.items()]))
+            for k,v in each_loss_dic.items():
+                tensorboard_writer.add_scalar(f"avg_{k}_loss", v, epoch + 1)
 
             # save last trained model
             torch.jit.save(net, self.env_dict["model_path"][:-3] + "_last.pt")
@@ -344,6 +362,7 @@ class SuperResolutionInference():
                 val_outputs_all = []
                 val_targets_all = []
                 epoch_metric_val = {k:0 for k in metric_dic.keys()}
+                each_loss_dic = {k:0 for k in loss_func_dic.keys()}
                 step = 0
                 start_time = time.time()
                 with torch.no_grad():
@@ -362,6 +381,9 @@ class SuperResolutionInference():
                         for k,metric in metric_dic.items():
                             metric_val = metric(val_outputs, val_targets)
                             epoch_metric_val[k] += metric_val.detach().item()
+                        for k,loss_func in loss_func_dic.items():
+                            each_loss = loss_func(val_outputs, val_targets)
+                            each_loss_dic[k] = each_loss.detach().cpu().item()
                         step += 1
 
                 end_time = time.time()
@@ -379,8 +401,13 @@ class SuperResolutionInference():
                 for k in epoch_metric_val.keys():
                     epoch_metric_val[k] /= step
                     print(f"epoch {epoch + 1} validation {k}: {epoch_metric_val[k]:.4f}")
+                for k in each_loss_dic.keys():
+                    each_loss_dic[k] /= step
+                print(', '.join([f'{k} loss: {v:.4f}' for k,v in each_loss_dic.items()]))
                 # write to tensorboard event
                 tensorboard_writer.add_scalar(f"val_{k}", epoch_metric_val[k], epoch + 1)
+                for k,v in each_loss_dic.items():
+                    tensorboard_writer.add_scalar(f"val_{k}_loss", v, epoch + 1)
 
                 # save best trained model
                 epoch_val_sum = 0
@@ -511,9 +538,11 @@ class SuperResolutionInference():
         
         return optimizer, scheduler, scaler
     #loss func
-    def get_loss_func(self,device):
-        loss = PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device)
-        return loss
+    def get_loss_func_dic(self,device):
+        loss_1 = PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device)
+        loss_2 = nn.L1Loss().to(device)
+        loss_3 = nn.MSELoss().to(device)
+        return {'percep': loss_1, 'l1': loss_2, 'mse': loss_3}
     
 def load_model(path=None,transform_func=None):
     if path:  # make sure to load pretrained model
