@@ -288,8 +288,8 @@ class SuperResolutionInference():
                 #print(batch_data)
                 inputs = batch_data["low_res_image"].to(device)
                 targets = batch_data["image"].to(device)
-                print('low res img shape: ', inputs.shape)
-                print('ori img shape: ',targets.shape)
+                #print('low res img shape: ', inputs.shape)
+                #print('ori img shape: ',targets.shape)
 
                 optimizer.zero_grad(set_to_none=True)
                 #with torch.autograd.detect_anomaly(): #for debug
