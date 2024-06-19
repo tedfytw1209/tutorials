@@ -324,7 +324,7 @@ class SuperResolutionInference():
                     #print_network_params(detector.network.named_parameters())
                     #clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     optimizer.step()
-                print('outputs shape: ', outputs.shape)
+                #print('outputs shape: ', outputs.shape)
                 #raise('Stop and debug')
                 
                 # save to tensorboard
@@ -394,19 +394,17 @@ class SuperResolutionInference():
                 tensorboard_writer.add_image("val_output_img", draw_img.transpose([2, 1, 0]), epoch + 1)
                 tensorboard_writer.add_image("val_origin_img", draw_img_ori.transpose([2, 1, 0]), epoch + 1)
 
-                # compute metrics
+                # compute metrics & write to tensorboard event
                 del val_inputs
                 torch.cuda.empty_cache()
                 for k in epoch_metric_val.keys():
                     epoch_metric_val[k] /= step
                     print(f"epoch {epoch + 1} validation {k}: {epoch_metric_val[k]:.4f}")
+                    tensorboard_writer.add_scalar(f"val_{k}", epoch_metric_val[k], epoch + 1)
                 for k in each_loss_dic.keys():
                     each_loss_dic[k] /= step
-                print(', '.join([f'{k} loss: {v:.4f}' for k,v in each_loss_dic.items()]))
-                # write to tensorboard event
-                tensorboard_writer.add_scalar(f"val_{k}", epoch_metric_val[k], epoch + 1)
-                for k,v in each_loss_dic.items():
                     tensorboard_writer.add_scalar(f"val_{k}_loss", v, epoch + 1)
+                print(', '.join([f'{k} loss: {v:.4f}' for k,v in each_loss_dic.items()]))
 
                 # save best trained model
                 epoch_val_sum = 0
