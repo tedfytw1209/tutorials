@@ -16,7 +16,8 @@ from typing import Dict
 from monai.config.type_definitions import NdarrayOrTensor
 from monai import transforms
 from monai.config import IndexSelection, KeysCollection, SequenceStr
-from monai.transforms.transform import LazyTransform, MapTransform, Randomizable, Identityd
+from monai.transforms.transform import LazyTransform, MapTransform, Randomizable
+from monai.transforms import Identityd
 from torchvision.transforms.functional import rgb_to_grayscale
 
 class ToGrayScale(MapTransform):
