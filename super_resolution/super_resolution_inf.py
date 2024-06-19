@@ -220,9 +220,11 @@ class SuperResolutionInference():
         #1. build the model
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         ## !! need handle different scale problem
+        psnr = PeakSignalNoiseRatio(data_range=1.0, device=device)
+        ssim = StructuralSimilarity(device=device)
         metric_dic = {
-            'PSNR': PeakSignalNoiseRatio(data_range=1.0, device=device),
-            'SSIM': StructuralSimilarity(device=device),
+            'PSNR': psnr.compute,
+            'SSIM': ssim.compute,
             }
         train_results, test_results, compute_results = {},{},{}
         if self.use_train:
