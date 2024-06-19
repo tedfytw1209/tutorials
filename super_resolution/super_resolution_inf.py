@@ -30,7 +30,7 @@ from torch.nn.utils.clip_grad import clip_grad_norm_
 
 from torch.utils.tensorboard import SummaryWriter
 from warmup_scheduler import GradualWarmupScheduler
-
+from torcheval.metrics import PeakSignalNoiseRatio, StructuralSimilarity
 import monai
 
 from monai.data import DataLoader, Dataset
@@ -218,22 +218,26 @@ class SuperResolutionInference():
         """
         #1. build the model
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        metric = PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device)
+        ## !! need handle different scale problem
+        metric_dic = {
+            'perceptual_loss': PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device),
+            'PSNR': PeakSignalNoiseRatio(data_range=1.0, device=device),
+            'SSIM': StructuralSimilarity(device=device),
+            }
         train_results, test_results, compute_results = {},{},{}
         if self.use_train:
-            train_results = self.train(metric=metric, pre_net=pretrain_network, device=device)
+            train_results = self.train(metric_dic=metric_dic, pre_net=pretrain_network, device=device)
         else:
             print("Debug Mode: skip training process with self.use_train = ",self.use_train)
         if self.use_test:
-            test_results = self.test(metric=metric, device=device)
+            test_results = self.test(metric_dic=metric_dic, device=device)
         else:
             print("Debug Mode: skip test process with self.use_test = ",self.use_test)
         compute_results['infer_train'] = train_results
         compute_results['infer_test'] = test_results
         return compute_results
     #3. train
-    def train(self, metric, device, pre_net=None):
+    def train(self, metric_dic, device, pre_net=None):
         """
         Training with the `network` pretrained-model (or not).
         1. First build the model and load pre-trained-model
@@ -263,7 +267,7 @@ class SuperResolutionInference():
         tensorboard_writer = SummaryWriter(self.args.tfevent_path)
         draw_func = visualize_image_tf
         val_interval = self.config_dict.get('val_interval', 5)  # do validation every val_interval epochs
-        best_val_epoch_metric = 1e9
+        best_val_epoch_metric = -1e9
         best_val_epoch = -1  # the epoch that gives best validation metrics
         max_epochs = self.config_dict.get('finetune_epochs', 300)
         epoch_len = len(self.train_ds) // self.train_loader.batch_size
@@ -339,7 +343,7 @@ class SuperResolutionInference():
                 net.eval()
                 val_outputs_all = []
                 val_targets_all = []
-                epoch_val_loss = 0
+                epoch_metric_val = {k:0 for k in metric_dic.keys()}
                 step = 0
                 start_time = time.time()
                 with torch.no_grad():
@@ -355,8 +359,9 @@ class SuperResolutionInference():
                         # save outputs for evaluation
                         val_outputs_all += val_outputs
                         val_targets_all += val_targets
-                        loss = metric(val_outputs, val_targets)
-                        epoch_val_loss += loss.detach().item()
+                        for k,metric in metric_dic.items():
+                            metric_val = metric(val_outputs, val_targets)
+                            epoch_metric_val[k] += metric_val.detach().item()
                         step += 1
 
                 end_time = time.time()
@@ -371,21 +376,28 @@ class SuperResolutionInference():
                 # compute metrics
                 del val_inputs
                 torch.cuda.empty_cache()
-                epoch_val_loss /= step
-                print(f"epoch {epoch + 1} validation average loss: {epoch_val_loss:.4f}")
+                for k in epoch_metric_val.keys():
+                    epoch_metric_val[k] /= step
+                    print(f"epoch {epoch + 1} validation {k}: {epoch_metric_val[k]:.4f}")
                 # write to tensorboard event
-                tensorboard_writer.add_scalar("val_loss", epoch_val_loss, epoch + 1)
+                tensorboard_writer.add_scalar(f"val_{k}", epoch_metric_val[k], epoch + 1)
 
                 # save best trained model
-                if epoch_val_loss < best_val_epoch_metric:
-                    best_val_epoch_metric = epoch_val_loss
+                epoch_val_sum = 0
+                for k,v in epoch_metric_val.items():
+                    if 'loss' in k:
+                        epoch_val_sum = epoch_val_sum + (1-v)
+                    else:
+                        epoch_val_sum += v
+                if epoch_val_sum > best_val_epoch_metric:
+                    best_val_epoch_metric = epoch_val_sum
                     best_val_epoch = epoch + 1
                     torch.jit.save(net, self.env_dict["model_path"])
                     print("saved new best metric model")
                 print(
                     "current epoch: {} current metric: {:.4f} "
                     "best metric: {:.4f} at epoch {}".format(
-                        epoch + 1, epoch_val_loss, best_val_epoch_metric, best_val_epoch
+                        epoch + 1, epoch_val_sum, best_val_epoch_metric, best_val_epoch
                     )
                 )
 
@@ -393,7 +405,7 @@ class SuperResolutionInference():
         tensorboard_writer.close()
     
     #4. Test
-    def test(self, metric, device,net=None):
+    def test(self, metric_dic, device,net=None):
         # 2) build test network
         if net==None:
             net = torch.jit.load(self.env_dict["model_path"]).to(device)
@@ -404,7 +416,7 @@ class SuperResolutionInference():
         ###! use mscoco evaluation metric noe, mAP,mAR
         # 4. apply trained model
         net.eval()
-        epoch_test_loss = 0
+        epoch_metric_val = {k:0 for k in metric_dic.keys()}
         step = 0
         with torch.no_grad():
             start_time = time.time()
@@ -423,8 +435,9 @@ class SuperResolutionInference():
                 # save outputs for evaluation
                 test_outputs_all += test_outputs
                 test_targets_all += test_targets
-                loss = metric(test_outputs, test_targets)
-                epoch_test_loss += loss.detach().item()
+                for k,metric in metric_dic.items():
+                    metric_val = metric(test_outputs, test_targets)
+                    epoch_metric_val[k] += metric_val.detach().item()
                 step += 1
 
         # compute metrics
@@ -433,10 +446,11 @@ class SuperResolutionInference():
         end_time = time.time()
         print("Testing time: ", end_time - start_time)
             
-        epoch_test_loss /= step
-        print(f"Test average loss: {epoch_test_loss:.4f}")
+        for k in epoch_metric_val.keys():
+            epoch_metric_val[k] /= step
+            print(f"Test average {k}: {epoch_metric_val[k]:.4f}")
         
-        test_metric_dict = {'test_loss': epoch_test_loss}
+        test_metric_dict = {f'test_{k}': v for k,v in epoch_metric_val.items()}
         with open(self.args.result_list_file_path, "w") as outfile:
             json.dump(test_metric_dict, outfile, indent=4)
             
@@ -576,5 +590,5 @@ if __name__ == "__main__":
     if args.deter:
         debug_dict["set_deter"] = True
     #
-    inferer = OBJDetectInference(env_dict=env_dict, config_dict=config_dict, debug_dict=debug_dict, verbose=args.verbose)
+    inferer = SuperResolutionInference(env_dict=env_dict, config_dict=config_dict, debug_dict=debug_dict, verbose=args.verbose)
     inferer.compute(pretrain_network=pretrained_model)
