@@ -56,6 +56,7 @@ class StructuralSimilarity_gray(StructuralSimilarity):
                 images_1[idx].squeeze().detach().cpu().numpy(),
                 images_2[idx].squeeze().detach().cpu().numpy(),
                 multichannel=False,
+                data_range=1.0,
             )
             self.mssim_sum += mssim
 
