@@ -28,6 +28,15 @@ def load_mednist_datalist(
     datalist = [{"image": item["image"]} for item in data.data if item["class_name"] == "HeadCT"]
     return datalist
 
+def load_brainTR_datalist(
+    data_list_key: str, #"training" or "validation"
+    base_dir: str, #dataset path
+):
+    root_dir = tempfile.mkdtemp() if base_dir is None else base_dir
+    print(root_dir)
+    data = MedNISTDataset(root_dir=root_dir, section=data_list_key, download=True, seed=0)
+    datalist = [{"image": item["image"]} for item in data.data if item["class_name"] == "HeadCT"]
+    return datalist
 
 ### for eyeq dataset !!! not impl
 def load_eyeq_datalist(
@@ -77,7 +86,7 @@ def load_eyeq_datalist(
 
     return _append_paths(base_dir, is_segmentation, expected_data)'''
 
-'''class ABDataset(Dataset):
+class brainTR(Dataset):
     def __init__(self, root_a):
         self.root_a = root_a
         self.a_images = os.listdir(root_a)
@@ -91,4 +100,4 @@ def load_eyeq_datalist(
         a_path = os.path.join(self.root_a, a_img)
         a_img = np.array(Image.open(a_path).convert("RGB"))
 
-        return a_img'''
+        return a_img
