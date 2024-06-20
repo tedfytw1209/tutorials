@@ -66,7 +66,7 @@ def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
             new_name = new_name.replace('.patch_embed.proj', '.patch_embedding.patch_embeddings')
             new_name = new_name.replace('.fc', '.linear')
             #encoder. => feature_extractor.body.
-            new_name = new_name.replace('encoder.', 'feature_extractor.body.')
+            #new_name = new_name.replace('encoder.', 'feature_extractor.body.')
             new_state_dict[new_name] = state_dict.pop(name)
             names_dict[name] = new_name
     #return
