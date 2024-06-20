@@ -976,8 +976,8 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         for i in range(len(head_outputs[self.cls_key])):
             cls_sample = head_outputs[self.cls_key][i][0]
             reg_sample = head_outputs[self.box_reg_key][i][0]
-            print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
-            print(i , "regression head=> shape: ", reg_sample.shape," , mean: ",reg_sample.mean(dim=0),' ,range: ', reg_sample.min(dim=0), " ~ ", reg_sample.max(dim=0))
+            print(i , "class head=> shape: ", cls_sample.shape)
+            print(i , "regression head=> shape: ", reg_sample.shape)
 
         # 4. Generate anchors and store it in self.anchors: List[Tensor]
         self.generate_anchors(images, head_outputs)
@@ -1037,7 +1037,10 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         """
         matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
         print('Anchors for sample',0)
-        print(anchors)
+        print(anchors[0].shape)
+        print(anchors[0].min(0))
+        print(anchors[0].max(0))
+        print(anchors[0])
         print('Matched indexs for sample', 0)
         print(matched_idxs[0].shape)
         print(matched_idxs[0].max())
