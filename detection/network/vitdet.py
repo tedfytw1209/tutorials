@@ -972,12 +972,12 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         print('Head outputs:')
         #classification outs: cls_logits_maps[i] is a (B, num_anchors * num_classes, H_i, W_i) or (B, num_anchors * num_classes, H_i, W_i, D_i) Tensor
         #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
-        print('class head:')
+        print(len(head_outputs[self.cls_key]))
         for i in range(len(head_outputs[self.cls_key])):
-            cls_sample = head_outputs[self.cls_key][i][0]
-            reg_sample = head_outputs[self.box_reg_key][i][0]
-            print(i , "class head=> shape: ", cls_sample.shape)
-            print(i , "regression head=> shape: ", reg_sample.shape)
+            cls_sample = head_outputs[self.cls_key][i]
+            reg_sample = head_outputs[self.box_reg_key][i]
+            print(i , "class head=> shape: ", cls_sample.shape, " max logits: ", torch.max(cls_sample)," mean logits: ",torch.mean(cls_sample))
+            print(i , "regression head=> shape: ", reg_sample.shape, " max regress: ", torch.max(reg_sample)," mean logits: ",torch.mean(reg_sample))
 
         # 4. Generate anchors and store it in self.anchors: List[Tensor]
         self.generate_anchors(images, head_outputs)
@@ -992,13 +992,14 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             # A = self.num_anchors_per_loc
             head_outputs[key] = self._reshape_maps(head_outputs[key])
         print('Detector after reshape:')
-        for i in range(len(head_outputs[self.cls_key])):
-            print(head_outputs[self.cls_key].shape)
-            cls_sample = head_outputs[self.cls_key][i]
-            reg_sample = head_outputs[self.box_reg_key][i]
-            print(i , "class head=> shape: ", cls_sample.shape)
-            print(i , "regression head=> shape: ", reg_sample.shape)
+        print(len(head_outputs[self.cls_key]))
+        print(head_outputs[self.cls_key].shape)
+        cls_sample = head_outputs[self.cls_key]
+        reg_sample = head_outputs[self.box_reg_key]
+        print("class head=> shape: ", cls_sample.shape, " max logits: ", torch.max(cls_sample)," mean logits: ",torch.mean(cls_sample))
+        print("regression head=> shape: ", reg_sample.shape, " max regress: ", torch.max(reg_sample)," mean logits: ",torch.mean(reg_sample))
         
+        '''
         print('Anchors for sample',0)
         print(self.anchors[0].shape)
         print(self.anchors[0].min(0))
@@ -1006,6 +1007,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         print(self.anchors[0])
         print('image_sizes for sample 0: ',image_sizes[0])
         print('num_anchor_locs_per_level: ', num_anchor_locs_per_level[0])
+        '''
         # 6(1). If during training, return losses
         if self.training:
             losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore
