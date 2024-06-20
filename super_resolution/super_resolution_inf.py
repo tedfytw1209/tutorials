@@ -493,15 +493,12 @@ class SuperResolutionInference():
         encoder, decoder = self.build_encoder_decoder()
         total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
         latent_size = int(self.args.img_size / total_scale_factor)
-        print('#'*20)
-        print('Build Encoder Network with structure:')
-        print_network_params(encoder.named_parameters(),show_grad=False)
-        print('#'*20)
-        print('Build Decoder Network with structure:')
-        print_network_params(decoder.named_parameters(),show_grad=False)
         latent_shape = [-1, self.args.embed_dim] + [latent_size for i in range(self.args.spatial_dims)]
         net = Lazy_Autoencoder(encoder,decoder, latent_img_shape=latent_shape)
         net = torch.jit.script(net)
+        print('#'*20)
+        print('Build Network with structure:')
+        print_network_params(net.named_parameters(),show_grad=False)
         return net
     
     #vitdet
