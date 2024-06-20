@@ -93,7 +93,7 @@ class ToGrayScale(MapTransform):
 
     def __init__(self, keys: KeysCollection, allow_missing_keys: bool = False):
         self.keys = keys
-        super().__init__(self, keys, allow_missing_keys)
+        MapTransform.__init__(self, keys, allow_missing_keys)
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> Dict[Hashable, torch.Tensor]:
         d = dict(data)
