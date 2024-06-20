@@ -983,7 +983,6 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         self.generate_anchors(images, head_outputs)
         # num_anchor_locs_per_level: List[int], list of HW or HWD for each level
         num_anchor_locs_per_level = [x.shape[2:].numel() for x in head_outputs[self.cls_key]]
-        #print('num_anchor_locs_per_level: ', num_anchor_locs_per_level)
 
         # 5. Reshape and concatenate head_outputs values from List[Tensor] to Tensor
         # head_outputs, originally being Dict[str, List[Tensor]], will be reshaped to Dict[str, Tensor]
@@ -1000,6 +999,13 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             print(i , "class head=> shape: ", cls_sample.shape)
             print(i , "regression head=> shape: ", reg_sample.shape)
         
+        print('Anchors for sample',0)
+        print(self.anchors[0].shape)
+        print(self.anchors[0].min(0))
+        print(self.anchors[0].max(0))
+        print(self.anchors[0])
+        print('image_sizes for sample 0: ',image_sizes[0])
+        print('num_anchor_locs_per_level: ', num_anchor_locs_per_level[0])
         # 6(1). If during training, return losses
         if self.training:
             losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore
