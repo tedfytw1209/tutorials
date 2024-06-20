@@ -69,6 +69,8 @@ def print_network_params(params, show_grad=True):
         print('value %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item(),np.mean(v_v[i]).item()))
         if show_grad:
             print('grad %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item(),np.mean(v_v[i]).item()))
+        if i>5:
+            break #!!!tmp setting
 
 def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
     new_state_dict = OrderedDict()
@@ -400,7 +402,7 @@ class OBJDetectInference():
                     loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     #with torch.autograd.detect_anomaly(): #for debug
                     loss.backward()
-                    #print_network_params(detector.network.named_parameters())
+                    print_network_params(detector.network.named_parameters())
                     #clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     optimizer.step()
                 
@@ -460,14 +462,14 @@ class OBJDetectInference():
                         val_outputs_all += val_outputs
                         val_targets_all += val_data
                 #print val_ouputs
-                for i in range(1):
+                '''for i in range(1):
                     print('Val sample ', i)
                     print(' val_outputs ', detector.target_box_key, '=>shape: ',val_outputs_all[i][detector.target_box_key].shape, ', value:', val_outputs_all[i][detector.target_box_key])
                     print(' val_outputs ', detector.target_label_key, '=>shape: ',val_outputs_all[i][detector.target_label_key].shape, ', value:', val_outputs_all[i][detector.target_label_key])
                     print(' val_outputs ', detector.pred_score_key, '=>shape: ',val_outputs_all[i][detector.pred_score_key].shape, ', value:', val_outputs_all[i][detector.pred_score_key])
                     print(' val_targets ', detector.target_box_key, '=>shape: ',val_targets_all[i][detector.target_box_key].shape, ', value:', val_targets_all[i][detector.target_box_key])
                     print(' val_targets ', detector.target_label_key, '=>shape: ',val_targets_all[i][detector.target_label_key].shape, ', value:', val_targets_all[i][detector.target_label_key])
-                    
+                '''    
                 end_time = time.time()
                 print(f"Validation time: {end_time-start_time}s")
 
@@ -590,7 +592,7 @@ class OBJDetectInference():
                 gt_boxes=gt_boxes,
                 gt_classes=gt_classes,
             )
-            for i in range(1):
+            '''for i in range(1):
                 print('Test sample ', i)
                 print(' test_outputs ', detector.target_box_key, '=>shape: ',test_outputs_all[i][detector.target_box_key].shape, ', max:', test_outputs_all[i][detector.target_box_key].max(0),
                       ', min:', test_outputs_all[i][detector.target_box_key].min(0))
@@ -598,6 +600,7 @@ class OBJDetectInference():
                 print(' test_outputs ', detector.pred_score_key, '=>shape: ',test_outputs_all[i][detector.pred_score_key].shape, ', value:', test_outputs_all[i][detector.pred_score_key])
                 print(' test_targets ', detector.target_box_key, '=>shape: ',test_targets_all[i][detector.target_box_key].shape, ', value:', test_targets_all[i][detector.target_box_key])
                 print(' test_targets ', detector.target_label_key, '=>shape: ',test_targets_all[i][detector.target_label_key].shape, ', value:', test_targets_all[i][detector.target_label_key])
+            '''
             test_metric_dict = metric(results_metric)[0]
             print('Metric result:')
             print(test_metric_dict)
