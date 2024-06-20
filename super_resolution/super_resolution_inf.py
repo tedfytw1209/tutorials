@@ -312,7 +312,7 @@ class SuperResolutionInference():
                         for k,loss_func in loss_func_dic.items():
                             each_loss = loss_func(outputs, targets)
                             loss += each_loss
-                            each_loss_dic[k] = each_loss.detach().cpu().item()
+                            each_loss_dic[k] += each_loss.detach().cpu().item()
                             losses_num+=1
                         loss = loss / losses_num
                     #with torch.autograd.detect_anomaly(): #for debug
@@ -326,7 +326,7 @@ class SuperResolutionInference():
                     for k,loss_func in loss_func_dic.items():
                         each_loss = loss_func(outputs, targets)
                         loss += each_loss
-                        each_loss_dic[k] = each_loss.detach().cpu().item()
+                        each_loss_dic[k] += each_loss.detach().cpu().item()
                         losses_num+=1
                     loss = loss / losses_num
                     #with torch.autograd.detect_anomaly(): #for debug
@@ -368,8 +368,6 @@ class SuperResolutionInference():
             # ------------- Validation for model selection -------------
             if (epoch + 1) % val_interval == 0:
                 net.eval()
-                val_outputs_all = []
-                val_targets_all = []
                 epoch_metric_val = {k:0 for k in metric_dic.keys()}
                 each_loss_dic = {k:0 for k in loss_func_dic.keys()}
                 step = 0
@@ -385,19 +383,19 @@ class SuperResolutionInference():
                             val_outputs = net(val_inputs)
 
                         # save outputs for evaluation
-                        val_outputs_all += val_outputs
-                        val_targets_all += val_targets
                         for k,metric in metric_dic.items():
                             metric_val = metric(val_outputs, val_targets)
                             epoch_metric_val[k] += metric_val.detach().item()
                         for k,loss_func in loss_func_dic.items():
                             each_loss = loss_func(val_outputs, val_targets)
-                            each_loss_dic[k] = each_loss.detach().cpu().item()
+                            each_loss_dic[k] += each_loss.detach().cpu().item()
                         step += 1
 
                 end_time = time.time()
                 print(f"Validation time: {end_time-start_time}s")
-
+                del val_data
+                torch.cuda.empty_cache()
+                gc.collect()
                 # visualize an inference image and boxes to tensorboard
                 draw_img_ori = draw_func(val_targets[0].permute(1,2,0).cpu().detach().numpy())
                 draw_img = draw_func(val_outputs[0].permute(1,2,0).cpu().detach().numpy())
@@ -455,8 +453,6 @@ class SuperResolutionInference():
         with torch.no_grad():
             start_time = time.time()
             net.eval()
-            test_outputs_all = []
-            test_targets_all = []
             for test_data in self.inference_loader:
                 test_inputs = test_data["low_res_image"].to(device)
                 test_targets = test_data["image"].to(device)
@@ -467,8 +463,6 @@ class SuperResolutionInference():
                     test_outputs = net(test_inputs)
 
                 # save outputs for evaluation
-                test_outputs_all += test_outputs
-                test_targets_all += test_targets
                 for k,metric in metric_dic.items():
                     metric_val = metric(test_outputs, test_targets)
                     epoch_metric_val[k] += metric_val.detach().item()
