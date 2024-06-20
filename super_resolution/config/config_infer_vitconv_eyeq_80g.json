@@ -6,7 +6,7 @@
 	"warmup_epochs": 10,
 	"finetune_epochs": 200,
 	"val_interval": 5,
-	"batch_size": 16,
+	"batch_size": 8,
 	"data_channels": 3,
 	"n_input_channels": 1,
 	"spatial_dims": 2,
