@@ -124,7 +124,7 @@ class SuperResolutionInference():
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
         low_res_size = int(self.args.img_size // self.args.scale_factor)
-        turn2gray = (self.args.n_input_channels!=1)
+        turn2gray = (self.config_dict.get("data_channels",1)!=1)
         train_transforms = generate_mednist_train_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
         val_transforms = generate_mednist_validation_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
         # Use val transform
