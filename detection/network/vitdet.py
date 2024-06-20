@@ -969,7 +969,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             head_outputs = predict_with_inferer(
                 images, self.network, keys=[self.cls_key, self.box_reg_key], inferer=self.inferer
             )
-        '''print('Head outputs:')
+        print('Head outputs:')
         #classification outs: cls_logits_maps[i] is a (B, num_anchors * num_classes, H_i, W_i) or (B, num_anchors * num_classes, H_i, W_i, D_i) Tensor
         #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
         print('class head:')
@@ -977,7 +977,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             cls_sample = head_outputs[self.cls_key][i][0]
             reg_sample = head_outputs[self.box_reg_key][i][0]
             print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
-            print(i , "regression head=> shape: ", reg_sample.shape," , mean: ",reg_sample.mean(dim=0),' ,range: ', reg_sample.min(dim=0), " ~ ", reg_sample.max(dim=0))'''
+            print(i , "regression head=> shape: ", reg_sample.shape," , mean: ",reg_sample.mean(dim=0),' ,range: ', reg_sample.min(dim=0), " ~ ", reg_sample.max(dim=0))
 
         # 4. Generate anchors and store it in self.anchors: List[Tensor]
         self.generate_anchors(images, head_outputs)
@@ -1036,9 +1036,11 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             a dict of several kinds of losses.
         """
         matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
+        print('Anchors for sample',0)
+        print(anchors)
         print('Matched indexs for sample', 0)
         print(matched_idxs[0].shape)
-        print(matched_idxs[0])
+        print(matched_idxs[0].max())
         losses_cls = self.compute_cls_loss(head_outputs_reshape[self.cls_key], targets, matched_idxs)
         losses_box_regression = self.compute_box_loss(
             head_outputs_reshape[self.box_reg_key], targets, anchors, matched_idxs

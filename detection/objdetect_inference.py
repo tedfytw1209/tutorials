@@ -286,9 +286,10 @@ class OBJDetectInference():
         # returned_layers: when target boxes are small, set it smaller
         # base_anchor_shapes: anchor shape for the most high-resolution output,
         #   when target boxes are small, set it smaller
-        # retuened_layers = [1, 2] => feature_map_scales = [1, 2, 4]
+        feature_map_scales = [2**l for l in range(len(self.args.returned_layers) + 1)]
+        print('feature_map_scales :',feature_map_scales)
         anchor_generator = AnchorGeneratorWithAnchorShape(
-                feature_map_scales=[2**l for l in range(len(self.args.returned_layers) + 1)],
+                feature_map_scales=feature_map_scales,
                 base_anchor_shapes=self.args.base_anchor_shapes,
             )
 
