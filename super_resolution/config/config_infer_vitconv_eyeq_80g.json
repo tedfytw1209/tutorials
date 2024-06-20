@@ -2,7 +2,7 @@
 	"model": "vit",
 	"dataset": "eyeq",
 	"lr": 3e-4,
-	"scheduler_step": 10,
+	"scheduler_step": 50,
 	"warmup_epochs": 10,
 	"finetune_epochs": 200,
 	"val_interval": 5,
