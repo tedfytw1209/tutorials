@@ -996,7 +996,9 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         for i in range(len(head_outputs[self.cls_key])):
             print(head_outputs[self.cls_key].shape)
             cls_sample = head_outputs[self.cls_key][i]
+            reg_sample = head_outputs[self.box_reg_key][i]
             print(i , "class head=> shape: ", cls_sample.shape)
+            print(i , "regression head=> shape: ", reg_sample.shape)
         
         # 6(1). If during training, return losses
         if self.training:

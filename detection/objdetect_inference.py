@@ -592,14 +592,13 @@ class OBJDetectInference():
             )
             for i in range(1):
                 print('Test sample ', i)
-                print(' test_outputs ', detector.target_box_key, '=>shape: ',test_outputs_all[i][detector.target_box_key].shape, ', value:', test_outputs_all[i][detector.target_box_key])
+                print(' test_outputs ', detector.target_box_key, '=>shape: ',test_outputs_all[i][detector.target_box_key].shape, ', max:', test_outputs_all[i][detector.target_box_key].max(0),
+                      ', min:', test_outputs_all[i][detector.target_box_key].min(0))
                 print(' test_outputs ', detector.target_label_key, '=>shape: ',test_outputs_all[i][detector.target_label_key].shape, ', value:', test_outputs_all[i][detector.target_label_key])
                 print(' test_outputs ', detector.pred_score_key, '=>shape: ',test_outputs_all[i][detector.pred_score_key].shape, ', value:', test_outputs_all[i][detector.pred_score_key])
                 print(' test_targets ', detector.target_box_key, '=>shape: ',test_targets_all[i][detector.target_box_key].shape, ', value:', test_targets_all[i][detector.target_box_key])
                 print(' test_targets ', detector.target_label_key, '=>shape: ',test_targets_all[i][detector.target_label_key].shape, ', value:', test_targets_all[i][detector.target_label_key])
             test_metric_dict = metric(results_metric)[0]
-            print('Raw results_metric')
-            print(results_metric)
             print('Metric result:')
             print(test_metric_dict)
             print('Utils metric mAP')
