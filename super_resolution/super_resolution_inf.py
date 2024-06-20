@@ -38,7 +38,7 @@ from monai.utils import set_determinism
 from monai.networks.nets import ViT
 from monai.losses import PatchAdversarialLoss, PerceptualLoss
 
-from dataset.load_dataset import load_mednist_datalist
+from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
 from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms, PSNR, SSIM
 from network.autoencoder import Lazy_Autoencoder, Conv_decoder
 from visualize_image import visualize_image_tf
@@ -137,7 +137,12 @@ class SuperResolutionInference():
             self.make_test_datasets(class_args,inference_transforms)
     
     def make_train_datasets(self,class_args,train_transforms,val_transforms):
-        train_data = load_mednist_datalist(
+        if self.args.dataset=="mednist":
+            load_data_func = load_mednist_datalist
+        elif self.args.dataset=="eyeq":
+            load_data_func = load_eyeq_datalist
+        
+        train_data = load_data_func(
             data_list_key="training",
             base_dir=class_args.data_base_dir,
         )
@@ -171,7 +176,12 @@ class SuperResolutionInference():
     
     def make_test_datasets(self,class_args,inference_transforms):
         #create a inference data loader
-        inference_data = load_mednist_datalist(
+        if self.args.dataset=="mednist":
+            load_data_func = load_mednist_datalist
+        elif self.args.dataset=="eyeq":
+            load_data_func = load_eyeq_datalist
+        
+        inference_data = load_data_func(
             data_list_key="validation",
             base_dir=class_args.data_base_dir,
         )

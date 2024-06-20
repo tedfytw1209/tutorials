@@ -1,5 +1,6 @@
 {
 	"model": "vit",
+	"dataset": "mednist",
 	"lr": 5e-5,
 	"scheduler_step": 10,
 	"warmup_epochs": 10,

@@ -22,12 +22,14 @@ def load_mednist_datalist(
     data_list_key: str, #"training" or "validation"
     base_dir: str, #dataset path
 ):
+    print('Load MedNIST dataset: ')
     root_dir = tempfile.mkdtemp() if base_dir is None else base_dir
     print(root_dir)
     data = MedNISTDataset(root_dir=root_dir, section=data_list_key, download=True, seed=0)
     datalist = [{"image": item["image"]} for item in data.data if item["class_name"] == "HeadCT"]
     return datalist
 
+### !!! not impl
 def load_brainTR_datalist(
     data_list_key: str, #"training" or "validation"
     base_dir: str, #dataset path
@@ -38,7 +40,7 @@ def load_brainTR_datalist(
     datalist = [{"image": item["image"]} for item in data.data if item["class_name"] == "HeadCT"]
     return datalist
 
-### for eyeq dataset !!! not impl
+
 def load_eyeq_datalist(
     data_list_key: str = "training",
     base_dir: PathLike | None = None,):
@@ -62,6 +64,7 @@ def load_eyeq_datalist(
         ]
 
     """
+    print('Load eyeQ dataset: ')
     if data_list_key=="training":
         data_list = "train"
     elif data_list_key=="validation":
