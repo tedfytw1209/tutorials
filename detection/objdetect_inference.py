@@ -69,8 +69,6 @@ def print_network_params(params, show_grad=True):
         print('value %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item(),np.mean(v_v[i]).item()))
         if show_grad:
             print('grad %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item(),np.mean(v_v[i]).item()))
-        if i>5:
-            break #!!!tmp setting
 
 def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
     new_state_dict = OrderedDict()
@@ -402,7 +400,7 @@ class OBJDetectInference():
                     loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     #with torch.autograd.detect_anomaly(): #for debug
                     loss.backward()
-                    print_network_params(detector.network.named_parameters())
+                    #print_network_params(detector.network.named_parameters())
                     #clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     optimizer.step()
                 
@@ -416,7 +414,8 @@ class OBJDetectInference():
                 tensorboard_writer.add_scalar("train_loss", loss.detach().item(), epoch_len * epoch + step)
                 #tmp
                 #raise('Stop Training for debug')
-
+            
+            print_network_params(detector.network.named_parameters())
             end_time = time.time()
             print(f"Training time: {end_time-start_time}s")
             del inputs, batch_data
