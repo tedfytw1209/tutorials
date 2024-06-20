@@ -992,12 +992,12 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             # or (B, sum(HWA), 2* self.spatial_dims) for self.box_reg_key
             # A = self.num_anchors_per_loc
             head_outputs[key] = self._reshape_maps(head_outputs[key])
-        '''print('Detector after reshape:')
+        print('Detector after reshape:')
         for i in range(len(head_outputs[self.cls_key])):
             print(head_outputs[self.cls_key].shape)
-            #cls_sample = head_outputs[self.cls_key][i][0,:,:]
-            #print(i , "class head=> shape: ", cls_sample.shape," , mean: ",cls_sample.mean(dim=0),' ,range: ', cls_sample.min(dim=0), " ~ ", cls_sample.max(dim=0))
-        '''
+            cls_sample = head_outputs[self.cls_key][i][0,:,:]
+            print(i , "class head=> shape: ", cls_sample.shape)
+        
         # 6(1). If during training, return losses
         if self.training:
             losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore

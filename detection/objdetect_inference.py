@@ -591,6 +591,8 @@ class OBJDetectInference():
                 gt_classes=gt_classes,
             )
             test_metric_dict = metric(results_metric)[0]
+            print('Raw results_metric')
+            print(results_metric)
             print('Metric result:')
             print(test_metric_dict)
             print('Utils metric mAP')
