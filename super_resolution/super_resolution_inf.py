@@ -611,7 +611,7 @@ if __name__ == "__main__":
     env_dict = json.load(open(args.environment_file, "r"))
     config_dict = json.load(open(args.config_file, "r"))
     keys_trans = None
-    if config_dict.get("model","")=="vitdet":
+    if config_dict.get("model","")=="vit":
         keys_trans = transform_vitkeys_from_basemodel
     pretrained_model = load_model(args.model,keys_trans)
     test_mode = args.testmode
