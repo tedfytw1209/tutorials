@@ -969,7 +969,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             head_outputs = predict_with_inferer(
                 images, self.network, keys=[self.cls_key, self.box_reg_key], inferer=self.inferer
             )
-        print('Head outputs:')
+        #print('Head outputs:')
         #classification outs: cls_logits_maps[i] is a (B, num_anchors * num_classes, H_i, W_i) or (B, num_anchors * num_classes, H_i, W_i, D_i) Tensor
         #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
         '''
@@ -1047,19 +1047,16 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             a dict of several kinds of losses.
         """
         matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
-        '''
+
         print('GT for sample',0)
         print(targets[0][self.target_label_key])
         print(targets[0][self.target_box_key])
-        print('Matched indexs for sample', 0)
-        print(matched_idxs[0].shape)
-        print(matched_idxs[0][matched_idxs[0] > -1])
         print('Correspond Anchor: ', anchors[0][matched_idxs[0] > -1])
         print('Class logits: ')
         print(head_outputs_reshape[self.cls_key][0, matched_idxs[0] > -1])
         print('Regression box:')
         print(head_outputs_reshape[self.box_reg_key][0, matched_idxs[0] > -1])
-        '''
+
         losses_cls = self.compute_cls_loss(head_outputs_reshape[self.cls_key], targets, matched_idxs)
         losses_box_regression = self.compute_box_loss(
             head_outputs_reshape[self.box_reg_key], targets, anchors, matched_idxs
@@ -1217,6 +1214,6 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             matched_gt_boxes_per_image_ = self.box_coder.encode_single(matched_gt_boxes_per_image_, anchors_per_image)
         if self.decode_pred:
             box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
-        print('box_regression_per_image_', box_regression_per_image_)
-        print('matched_gt_boxes_per_image_',matched_gt_boxes_per_image_)
+        #print('box_regression_per_image_', box_regression_per_image_)
+        #print('matched_gt_boxes_per_image_',matched_gt_boxes_per_image_)
         return box_regression_per_image_, matched_gt_boxes_per_image_
