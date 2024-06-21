@@ -972,13 +972,14 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         print('Head outputs:')
         #classification outs: cls_logits_maps[i] is a (B, num_anchors * num_classes, H_i, W_i) or (B, num_anchors * num_classes, H_i, W_i, D_i) Tensor
         #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
+        '''
         print(len(head_outputs[self.cls_key]))
         for i in range(len(head_outputs[self.cls_key])):
             cls_sample = head_outputs[self.cls_key][i][0]
             reg_sample = head_outputs[self.box_reg_key][i][0]
             print(i , "class head=> shape: ", cls_sample.shape, " max logits: ", torch.max(cls_sample)," mean logits: ",torch.mean(cls_sample))
             print(i , "regression head=> shape: ", reg_sample.shape, " max regress: ", torch.max(reg_sample)," mean logits: ",torch.mean(reg_sample))
-
+        '''
         # 4. Generate anchors and store it in self.anchors: List[Tensor]
         self.generate_anchors(images, head_outputs)
         # num_anchor_locs_per_level: List[int], list of HW or HWD for each level
@@ -1216,6 +1217,6 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             matched_gt_boxes_per_image_ = self.box_coder.encode_single(matched_gt_boxes_per_image_, anchors_per_image)
         if self.decode_pred:
             box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
-        '''print('box_regression_per_image_', box_regression_per_image_)
-        print('matched_gt_boxes_per_image_',matched_gt_boxes_per_image_)'''
+        print('box_regression_per_image_', box_regression_per_image_)
+        print('matched_gt_boxes_per_image_',matched_gt_boxes_per_image_)
         return box_regression_per_image_, matched_gt_boxes_per_image_
