@@ -969,15 +969,15 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             head_outputs = predict_with_inferer(
                 images, self.network, keys=[self.cls_key, self.box_reg_key], inferer=self.inferer
             )
-        '''print('Head outputs:')
+        print('Head outputs:')
         #classification outs: cls_logits_maps[i] is a (B, num_anchors * num_classes, H_i, W_i) or (B, num_anchors * num_classes, H_i, W_i, D_i) Tensor
         #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
         print(len(head_outputs[self.cls_key]))
         for i in range(len(head_outputs[self.cls_key])):
-            cls_sample = head_outputs[self.cls_key][i]
-            reg_sample = head_outputs[self.box_reg_key][i]
+            cls_sample = head_outputs[self.cls_key][i][0]
+            reg_sample = head_outputs[self.box_reg_key][i][0]
             print(i , "class head=> shape: ", cls_sample.shape, " max logits: ", torch.max(cls_sample)," mean logits: ",torch.mean(cls_sample))
-            print(i , "regression head=> shape: ", reg_sample.shape, " max regress: ", torch.max(reg_sample)," mean logits: ",torch.mean(reg_sample))'''
+            print(i , "regression head=> shape: ", reg_sample.shape, " max regress: ", torch.max(reg_sample)," mean logits: ",torch.mean(reg_sample))
 
         # 4. Generate anchors and store it in self.anchors: List[Tensor]
         self.generate_anchors(images, head_outputs)
@@ -1046,6 +1046,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             a dict of several kinds of losses.
         """
         matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
+        '''
         print('GT for sample',0)
         print(targets[0][self.target_label_key])
         print(targets[0][self.target_box_key])
@@ -1057,6 +1058,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         print(head_outputs_reshape[self.cls_key][0, matched_idxs[0] > -1])
         print('Regression box:')
         print(head_outputs_reshape[self.box_reg_key][0, matched_idxs[0] > -1])
+        '''
         losses_cls = self.compute_cls_loss(head_outputs_reshape[self.cls_key], targets, matched_idxs)
         losses_box_regression = self.compute_box_loss(
             head_outputs_reshape[self.box_reg_key], targets, anchors, matched_idxs

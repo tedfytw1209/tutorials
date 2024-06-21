@@ -41,5 +41,5 @@
     "box_head_conv_dims": [256, 256, 256],
     "box_head_fc_dims": [1024],
 	"base_anchor_shapes": [[6,8],[8,6],[10,10]],
-	"balanced_sampler_pos_fraction": 0.5
+	"balanced_sampler_pos_fraction": 0.6
 }
