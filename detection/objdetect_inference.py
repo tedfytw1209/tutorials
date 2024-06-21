@@ -415,7 +415,7 @@ class OBJDetectInference():
                 #tmp
                 #raise('Stop Training for debug')
             
-            print_network_params(detector.network.named_parameters())
+            #print_network_params(detector.network.named_parameters())
             end_time = time.time()
             print(f"Training time: {end_time-start_time}s")
             del inputs, batch_data
