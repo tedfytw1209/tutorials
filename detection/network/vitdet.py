@@ -1046,14 +1046,13 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             a dict of several kinds of losses.
         """
         matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
-        '''print('Anchors for sample',0)
-        print(anchors[0].shape)
-        print(anchors[0].min(0))
-        print(anchors[0].max(0))
-        print(anchors[0])
+        print('GT for sample',0)
+        print(targets[0][self.cls_key])
+        print(targets[0][self.box_reg_key])
         print('Matched indexs for sample', 0)
         print(matched_idxs[0].shape)
-        print(matched_idxs[0].max())'''
+        print(matched_idxs[0][matched_idxs[0] > -1])
+        print('Correspond Anchor: ', anchors[0][matched_idxs[0] > -1])
         losses_cls = self.compute_cls_loss(head_outputs_reshape[self.cls_key], targets, matched_idxs)
         losses_box_regression = self.compute_box_loss(
             head_outputs_reshape[self.box_reg_key], targets, anchors, matched_idxs
