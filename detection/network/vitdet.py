@@ -1047,8 +1047,8 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         """
         matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
         print('GT for sample',0)
-        print(targets[0][self.cls_key])
-        print(targets[0][self.box_reg_key])
+        print(targets[0][self.target_label_key])
+        print(targets[0][self.target_box_key])
         print('Matched indexs for sample', 0)
         print(matched_idxs[0].shape)
         print(matched_idxs[0][matched_idxs[0] > -1])
