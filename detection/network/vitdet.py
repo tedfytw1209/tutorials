@@ -1145,8 +1145,8 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             sampled_pos_inds = torch.where(torch.cat(sampled_pos_inds_list, dim=0))[0]
             sampled_neg_inds = torch.where(torch.cat(sampled_neg_inds_list, dim=0))[0]
             valid_idxs_per_image = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
-        '''print('cls_logits_per_image[valid_idxs_per_image, :]', cls_logits_per_image[valid_idxs_per_image, :])
-        print('gt_classes_target[valid_idxs_per_image, :]', gt_classes_target[valid_idxs_per_image, :])'''
+        print('cls_logits_per_image[valid_idxs_per_image, :]', cls_logits_per_image[valid_idxs_per_image, :])
+        print('gt_classes_target[valid_idxs_per_image, :]', gt_classes_target[valid_idxs_per_image, :])
         return cls_logits_per_image[valid_idxs_per_image, :], gt_classes_target[valid_idxs_per_image, :]
 
     def get_box_train_sample_per_image(
