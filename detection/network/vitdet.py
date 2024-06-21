@@ -1053,6 +1053,10 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         print(matched_idxs[0].shape)
         print(matched_idxs[0][matched_idxs[0] > -1])
         print('Correspond Anchor: ', anchors[0][matched_idxs[0] > -1])
+        print('Class logits: ')
+        print(head_outputs_reshape[self.cls_key][0, matched_idxs[0] > -1])
+        print('Regression box:')
+        print(head_outputs_reshape[self.box_reg_key][0, matched_idxs[0] > -1])
         losses_cls = self.compute_cls_loss(head_outputs_reshape[self.cls_key], targets, matched_idxs)
         losses_box_regression = self.compute_box_loss(
             head_outputs_reshape[self.box_reg_key], targets, anchors, matched_idxs
@@ -1145,8 +1149,8 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             sampled_pos_inds = torch.where(torch.cat(sampled_pos_inds_list, dim=0))[0]
             sampled_neg_inds = torch.where(torch.cat(sampled_neg_inds_list, dim=0))[0]
             valid_idxs_per_image = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
-        print('cls_logits_per_image[valid_idxs_per_image, :]', cls_logits_per_image[valid_idxs_per_image, :])
-        print('gt_classes_target[valid_idxs_per_image, :]', gt_classes_target[valid_idxs_per_image, :])
+        #print('cls_logits_per_image[valid_idxs_per_image, :]', cls_logits_per_image[valid_idxs_per_image, :])
+        #print('gt_classes_target[valid_idxs_per_image, :]', gt_classes_target[valid_idxs_per_image, :])
         return cls_logits_per_image[valid_idxs_per_image, :], gt_classes_target[valid_idxs_per_image, :]
 
     def get_box_train_sample_per_image(
