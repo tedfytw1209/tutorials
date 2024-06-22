@@ -38,38 +38,8 @@ from monai.losses import PerceptualLoss
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
 from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms, PSNR, SSIM
 from network.autoencoder import Lazy_Autoencoder, Conv_decoder
-from visualize_image import visualize_image_tf
-
-def print_network_params(params, show_grad=True):
-    v_n,v_v,v_g = [],[],[]
-    for name, para in params:
-        v_n.append(name)
-        v_v.append(para.detach().cpu().numpy() if para is not None else [0])
-        if show_grad:
-            v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
-    for i in range(len(v_n)):
-        print('value %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item(),np.mean(v_v[i]).item()))
-        if show_grad:
-            print('grad %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item(),np.mean(v_v[i]).item()))
-
-def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
-    new_state_dict = OrderedDict()
-    params_names = [k for k in state_dict.keys()]
-    names_dict = OrderedDict()
-    for name in params_names:
-        if name.startswith('encoder.'):
-            new_name = name
-            #not transform encoder_pos_embed
-            new_name = new_name.replace('.patch_embed.proj', '.patch_embedding.patch_embeddings')
-            new_name = new_name.replace('.fc', '.linear')
-            #encoder. => feature_extractor.body.
-            #new_name = new_name.replace('encoder.', 'feature_extractor.body.')
-            new_state_dict[new_name] = state_dict.pop(name)
-            names_dict[name] = new_name
-    #return
-    #print('Transform param name:')
-    #print([(k,v) for k, v in names_dict.items()])
-    return new_state_dict
+from visualize import visualize_image_tf, print_network_params
+from utils import transform_keys
 
 class SuperResolutionInference():
     """
@@ -539,7 +509,7 @@ class SuperResolutionInference():
         loss_3 = nn.MSELoss().to(device)
         return {'percep': loss_1, 'l1': loss_2, 'mse': loss_3}
     
-def load_model(path=None,transform_func=None):
+def load_model(path=None,transform_dic={}):
     if path:  # make sure to load pretrained model
         if '.ckpt' in path:
             state = torch.load(path, map_location='cpu')
@@ -547,8 +517,7 @@ def load_model(path=None,transform_func=None):
         elif '.pth' in path:
             state = torch.load(path, map_location='cpu')
             model = state['state_dict']
-        if transform_func!=None:
-            model = transform_func(model)
+        model = transform_keys(model,transform_dic)
     else:
         model = None
     return model
@@ -601,10 +570,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = yaml.load(open(args.environment_file, "r"))
     config_dict = yaml.load(open(args.config_file, "r"))
-    keys_trans = None
-    if config_dict.get("model","")=="vit":
-        keys_trans = transform_vitkeys_from_basemodel
-    pretrained_model = load_model(args.model,keys_trans)
+    transform_dic = {
+        '.patch_embed.proj': '.patch_embedding.patch_embeddings', 
+        '.fc': '.linear',
+    }
+    pretrained_model = load_model(args.model,transform_dic)
     test_mode = args.testmode
     debug_dict = {} #full test
     if args.testmode=='train': #train func test

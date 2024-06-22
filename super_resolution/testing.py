@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from super_resolution import SuperResolutionInference,transform_vitkeys_from_basemodel,load_model
+from super_resolution import SuperResolutionInference
 
 if __name__ == "__main__":
     '''

@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from super_resolution import SuperResolutionInference,transform_vitkeys_from_basemodel,load_model
+from super_resolution import SuperResolutionInference, load_model
 
 if __name__ == "__main__":
     '''
@@ -44,10 +44,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = yaml.load(open(args.environment_file, "r"))
     config_dict = yaml.load(open(args.config_file, "r"))
-    keys_trans = None
-    if config_dict.get("model","")=="vit":
-        keys_trans = transform_vitkeys_from_basemodel
-    pretrained_model = load_model(args.model,keys_trans)
+    transform_dic = {
+        '.patch_embed.proj': '.patch_embedding.patch_embeddings', 
+        '.fc': '.linear',
+    }
+    pretrained_model = load_model(args.model,transform_dic)
     debug_dict = {} #full test
     debug_dict['use_test'] = False
     if args.deter:
