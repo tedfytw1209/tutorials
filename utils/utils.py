@@ -1,6 +1,6 @@
 #For all utils functions
 from collections import OrderedDict
-
+import torch
 
 def transform_keys(state_dict: OrderedDict, transform_dic: dict = {}, visualize: bool = False):
     """
@@ -31,3 +31,16 @@ def transform_keys(state_dict: OrderedDict, transform_dic: dict = {}, visualize:
         print('Transform param name:')
         print([(k,v) for k, v in names_dict.items()])
     return new_state_dict
+
+def load_model(path=None,transform_dic={}):
+    if path:  # make sure to load pretrained model
+        if '.ckpt' in path:
+            state = torch.load(path, map_location='cpu')
+            model = state
+        elif '.pth' in path:
+            state = torch.load(path, map_location='cpu')
+            model = state['state_dict']
+        model = transform_keys(model,transform_dic)
+    else:
+        model = None
+    return model

@@ -13,72 +13,12 @@ import torch
 import numpy as np
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from typing import Dict
-from monai.config.type_definitions import NdarrayOrTensor
 from monai import transforms
-from monai.config import IndexSelection, KeysCollection, SequenceStr
-from monai.transforms.transform import LazyTransform, MapTransform, Randomizable
+from monai.config import KeysCollection
+from monai.transforms.transform import MapTransform
 from monai.transforms import Identityd
 from torchvision.transforms.functional import rgb_to_grayscale
 
-from torcheval.metrics.image import PeakSignalNoiseRatio
-from torcheval.metrics.image.ssim import StructuralSimilarity
-from skimage.metrics import structural_similarity
-from typing import Iterable, Optional, TypeVar
-TStructuralSimilarity = TypeVar("TStructuralSimilarity")
-
-class StructuralSimilarity_gray(StructuralSimilarity):
-    @torch.inference_mode()
-    # pyre-ignore[14]: `update` overrides method defined in `Metric` inconsistently.
-    def update(
-        self: TStructuralSimilarity,
-        images_1: torch.Tensor,
-        images_2: torch.Tensor,
-    ) -> TStructuralSimilarity:
-        """
-        Update the metric state with new input.
-        Ensure that the two sets of images have the same value range (ex. [-1, 1], [0, 1]).
-
-        Args:
-            images_1 (Tensor): A batch of the first set of images of shape [N, C, H, W].
-            images_2 (Tensor): A batch of the second set of images of shape [N, C, H, W].
-
-        """
-        if images_1.shape != images_2.shape:
-            raise RuntimeError("The two sets of images must have the same shape.")
-        # convert to fp32, mostly for bf16 types
-        images_1 = images_1.to(dtype=torch.float32)
-        images_2 = images_2.to(dtype=torch.float32)
-
-        batch_size = images_1.shape[0]
-
-        for idx in range(batch_size):
-            mssim = structural_similarity(
-                images_1[idx].squeeze().detach().cpu().numpy(),
-                images_2[idx].squeeze().detach().cpu().numpy(),
-                multichannel=False,
-                data_range=1.0,
-            )
-            self.mssim_sum += mssim
-
-        self.num_images += batch_size
-
-        return self
-
-class PSNR():
-    def __init__(self, data_range, device):
-        self.psnr = PeakSignalNoiseRatio(data_range=data_range, device=device)
-
-    def __call__(self, outputs, targets):
-        self.psnr.update(outputs, targets)
-        return self.psnr.compute()
-    
-class SSIM():
-    def __init__(self, device):
-        self.ssim = StructuralSimilarity_gray(device=device)
-
-    def __call__(self, outputs, targets):
-        self.ssim.update(outputs, targets)
-        return self.ssim.compute()
 
 class ToGrayScale(MapTransform):
     """
@@ -104,7 +44,18 @@ class ToGrayScale(MapTransform):
         
         return d
 
-def generate_mednist_train_transforms(image_size=64, lowres_img_size=16, to_gray=False):
+def generate_train_transforms(
+    image_size: int = 64, 
+    lowres_img_size: int = 16, 
+    to_gray: bool = False):
+    """
+    Return transform for super-resolution task (only for 2D image)
+
+    Args:
+        image_size: int = 64, origin (high resolution) image size 
+        lowres_img_size: int = 16, low resolution image size
+        to_gray: bool = False, transform to grayscale
+    """
     if to_gray:
         add_process = ToGrayScale
     else:
@@ -130,7 +81,15 @@ def generate_mednist_train_transforms(image_size=64, lowres_img_size=16, to_gray
     )
     return train_transforms
 
-def generate_mednist_validation_transforms(image_size=64, lowres_img_size=16, to_gray=False):
+def generate_validation_transforms(image_size=64, lowres_img_size=16, to_gray=False):
+    """
+    Return transform for super-resolution task (only for 2D image)
+
+    Args:
+        image_size: int = 64, origin (high resolution) image size 
+        lowres_img_size: int = 16, low resolution image size
+        to_gray: bool = False, transform to grayscale
+    """
     if to_gray:
         add_process = ToGrayScale
     else:

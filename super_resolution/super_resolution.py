@@ -27,7 +27,7 @@ from torch import Tensor, nn
 from torch.nn.utils.clip_grad import clip_grad_norm_
 
 from torch.utils.tensorboard import SummaryWriter
-from warmup_scheduler import GradualWarmupScheduler
+from network.warmup_scheduler import GradualWarmupScheduler
 import monai
 
 from monai.data import DataLoader, Dataset
@@ -36,10 +36,11 @@ from monai.networks.nets import ViT
 from monai.losses import PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
-from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms, PSNR, SSIM
+from ..utils.transform.superresolution import generate_train_transforms, generate_validation_transforms
 from network.autoencoder import Lazy_Autoencoder, Conv_decoder
-from visualize import visualize_image_tf, print_network_params
-from utils import transform_keys
+from ..utils.visualize import visualize_image_tf, print_network_params
+from ..utils.utils import load_model
+from ..utils.evaluation.superresolution_metric import PSNR, SSIM
 
 class SuperResolutionInference():
     """
@@ -92,10 +93,10 @@ class SuperResolutionInference():
         ### !maybe different transform in different dataset other than luna16
         low_res_size = int(self.args.img_size // self.args.scale_factor)
         turn2gray = (self.config_dict.get("data_channels",1)!=1)
-        train_transforms = generate_mednist_train_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
-        val_transforms = generate_mednist_validation_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
+        train_transforms = generate_train_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
+        val_transforms = generate_validation_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
         # Use val transform
-        inference_transforms = generate_mednist_validation_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
+        inference_transforms = generate_validation_transforms(image_size=self.args.img_size,lowres_img_size=low_res_size,to_gray=turn2gray)
         # 2. prepare training data
         if self.use_train:
             self.make_train_datasets(class_args,train_transforms,val_transforms)
@@ -509,19 +510,6 @@ class SuperResolutionInference():
         loss_3 = nn.MSELoss().to(device)
         return {'percep': loss_1, 'l1': loss_2, 'mse': loss_3}
     
-def load_model(path=None,transform_dic={}):
-    if path:  # make sure to load pretrained model
-        if '.ckpt' in path:
-            state = torch.load(path, map_location='cpu')
-            model = state
-        elif '.pth' in path:
-            state = torch.load(path, map_location='cpu')
-            model = state['state_dict']
-        model = transform_keys(model,transform_dic)
-    else:
-        model = None
-    return model
-
 if __name__ == "__main__":
     '''
     Only for testing all functions in OBJDetectInference.
