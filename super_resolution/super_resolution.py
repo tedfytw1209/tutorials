@@ -515,7 +515,7 @@ class SuperResolutionInference():
         
         decoder = Conv_decoder(
             in_channels=self.args.embed_dim,
-            out_channels=1,
+            out_channels=self.args.n_input_channels,
             scale_factor=total_scale_factor, # 4*16 in mednist
             conv_bias=True,
             use_layer_norm=True,
@@ -527,7 +527,7 @@ class SuperResolutionInference():
     def train_setting(self,net):
         optimizer = torch.optim.Adam(net.parameters(), lr=self.args.lr)
         
-        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=0.1)
+        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
         scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
         scaler = torch.cuda.amp.GradScaler() if self.amp else None
         

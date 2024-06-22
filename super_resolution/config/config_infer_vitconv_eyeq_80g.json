@@ -3,6 +3,7 @@
 	"dataset": "eyeq",
 	"lr": 1e-4,
 	"scheduler_step": 50,
+	"scheduler_gamma": 0.1,
 	"warmup_epochs": 10,
 	"finetune_epochs": 200,
 	"val_interval": 5,
