@@ -1,0 +1,5 @@
+
+model_path: /blue/bianjiang/tienyuchang/super_resol_model/model_mednist.pt
+data_base_dir: /orange/bianjiang/tienyu/MedNIST
+tfevent_path: /blue/bianjiang/tienyuchang/super_resol/mednist
+result_list_file_path: /blue/bianjiang/tienyuchang/result/result_mednist.json

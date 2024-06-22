@@ -1,0 +1,25 @@
+# architecture
+model": "vit"
+spatial_dims : 2
+embed_dim : 768
+depth : 12
+num_heads : 12
+out_channels : 256
+model_patch_size : 16
+mlp_dim : 3072
+n_input_channels : 1
+
+#dataset info
+dataset": "eyeq"
+data_channels : 3
+img_size : 2048
+scale_factor : 4
+
+#train setting
+lr": 1.0e-4
+scheduler_step : 50
+scheduler_gamma : 0.1
+warmup_epochs : 10
+finetune_epochs : 200
+val_interval : 5
+batch_size : 8

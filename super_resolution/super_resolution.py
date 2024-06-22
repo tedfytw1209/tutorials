@@ -16,13 +16,11 @@ Copy and Modify from monai/tutorials/detection.
 import argparse
 import gc
 import json
-import logging
-import sys
+import yaml
 import time
 from typing import Any
 from collections import OrderedDict
 
-import cv2
 import numpy as np
 import torch
 from torch import Tensor, nn
@@ -33,10 +31,9 @@ from warmup_scheduler import GradualWarmupScheduler
 import monai
 
 from monai.data import DataLoader, Dataset
-from monai.data.utils import no_collation
 from monai.utils import set_determinism
 from monai.networks.nets import ViT
-from monai.losses import PatchAdversarialLoss, PerceptualLoss
+from monai.losses import PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
 from generate_transforms import generate_mednist_train_transforms, generate_mednist_validation_transforms, PSNR, SSIM
@@ -566,14 +563,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-e",
         "--environment-file",
-        default="./config/environment.json",
-        help="environment json file that stores environment path",
+        default="./config/environment.yaml",
+        help="environment yaml file that stores environment path",
     )
     parser.add_argument(
         "-c",
         "--config-file",
-        default="./config/config_train.json",
-        help="config json file that stores hyper-parameters",
+        default="./config/config_train.yaml",
+        help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
         "-v",
@@ -602,8 +599,8 @@ if __name__ == "__main__":
         help="set determinism for model (seed=0)",
     )
     args = parser.parse_args()
-    env_dict = json.load(open(args.environment_file, "r"))
-    config_dict = json.load(open(args.config_file, "r"))
+    env_dict = yaml.load(open(args.environment_file, "r"))
+    config_dict = yaml.load(open(args.config_file, "r"))
     keys_trans = None
     if config_dict.get("model","")=="vit":
         keys_trans = transform_vitkeys_from_basemodel
