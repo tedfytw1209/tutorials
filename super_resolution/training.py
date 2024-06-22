@@ -1,6 +1,6 @@
 import argparse
 import json
-from super_resolution_inf import SuperResolutionInference,transform_vitkeys_from_basemodel,load_model
+from super_resolution import SuperResolutionInference,transform_vitkeys_from_basemodel,load_model
 
 if __name__ == "__main__":
     '''
