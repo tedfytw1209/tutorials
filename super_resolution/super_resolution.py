@@ -36,11 +36,11 @@ from monai.networks.nets import ViT
 from monai.losses import PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
-from ..utils.transform.superresolution import generate_train_transforms, generate_validation_transforms
+from utils.transform.superresolution import generate_train_transforms, generate_validation_transforms
 from network.autoencoder import Lazy_Autoencoder, Conv_decoder
-from ..utils.visualize import visualize_image_tf, print_network_params
-from ..utils.utils import load_model
-from ..utils.evaluation.superresolution_metric import PSNR, SSIM
+from utils.visualize import visualize_image_tf, print_network_params
+from utils.utils import load_model
+from utils.evaluation.superresolution_metric import PSNR, SSIM
 
 class SuperResolutionInference():
     """
