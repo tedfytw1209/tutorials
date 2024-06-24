@@ -27,16 +27,8 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 from torch.nn.utils.clip_grad import clip_grad_norm_
-from generate_transforms import (
-    generate_detection_train_transform,
-    generate_detection_val_transform,
-    generate_detection_inference_transform,
-    generate_detection_train_transform_2d,
-    generate_detection_val_transform_2d
-)
 
 from torch.utils.tensorboard import SummaryWriter
-from visualize_image import visualize_one_xy_slice_in_3d_image,visualize_one_xy_slice_in_2d_image
 from warmup_scheduler import GradualWarmupScheduler
 
 import monai
@@ -56,38 +48,16 @@ from monai.utils import set_determinism
 
 from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RetinaNetDetector_debug
 from network.vitdet import vitdet_fpn_feature_extractor
-from utils.detection_metric import mAP_with_IoU,mAR_with_IoU,AP_at_IoU
-
-def print_network_params(params, show_grad=True):
-    v_n,v_v,v_g = [],[],[]
-    for name, para in params:
-        v_n.append(name)
-        v_v.append(para.detach().cpu().numpy() if para is not None else [0])
-        if show_grad:
-            v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
-    for i in range(len(v_n)):
-        print('value %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item(),np.mean(v_v[i]).item()))
-        if show_grad:
-            print('grad %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item(),np.mean(v_v[i]).item()))
-
-def transform_vitkeys_from_basemodel(state_dict: OrderedDict):
-    new_state_dict = OrderedDict()
-    params_names = [k for k in state_dict.keys()]
-    names_dict = OrderedDict()
-    for name in params_names:
-        if name.startswith('encoder.'):
-            new_name = name
-            #not transform encoder_pos_embed
-            new_name = new_name.replace('.patch_embed.proj', '.patch_embedding.patch_embeddings')
-            new_name = new_name.replace('.fc', '.linear')
-            #encoder. => feature_extractor.body.
-            new_name = new_name.replace('encoder.', 'feature_extractor.body.')
-            new_state_dict[new_name] = state_dict.pop(name)
-            names_dict[name] = new_name
-    #return
-    #print('Transform param name:')
-    #print([(k,v) for k, v in names_dict.items()])
-    return new_state_dict
+from utils.utils import load_model
+from utils.visualize import visualize_one_xy_slice_in_3d_image,visualize_one_xy_slice_in_2d_image,print_network_params
+from utils.evaluation.detection_metric import mAP_with_IoU,mAR_with_IoU,AP_at_IoU
+from utils.transform.detection import (
+    generate_detection_train_transform,
+    generate_detection_val_transform,
+    generate_detection_inference_transform,
+    generate_detection_train_transform_2d,
+    generate_detection_val_transform_2d
+)
 
 class OBJDetectInference():
     """
@@ -787,20 +757,6 @@ class OBJDetectInference():
         optimizer.step()
         
         return optimizer, scheduler, scaler
-    
-def load_model(path=None,transform_func=None):
-    if path:  # make sure to load pretrained model
-        if '.ckpt' in path:
-            state = torch.load(path, map_location='cpu')
-            model = state
-        elif '.pth' in path:
-            state = torch.load(path, map_location='cpu')
-            model = state['state_dict']
-        if transform_func!=None:
-            model = transform_func(model)
-    else:
-        model = None
-    return model
 
 if __name__ == "__main__":
     '''
@@ -850,10 +806,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = json.load(open(args.environment_file, "r"))
     config_dict = json.load(open(args.config_file, "r"))
-    keys_trans = None
+    trans_dic = {}
     if config_dict.get("model","")=="vitdet":
-        keys_trans = transform_vitkeys_from_basemodel
-    pretrained_model = load_model(args.model,keys_trans)
+        trans_dic = {
+            '.patch_embed.proj': '.patch_embedding.patch_embeddings',
+            '.fc': '.linear',
+            'encoder.': 'feature_extractor.body.',
+        }
+    pretrained_model = load_model(args.model,transform_dic=trans_dic)
     test_mode = args.testmode
     debug_dict = {} #full test
     if args.testmode=='train': #train func test

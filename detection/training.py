@@ -1,6 +1,7 @@
 import argparse
 import json
-from objdetect_inference import OBJDetectInference,transform_vitkeys_from_basemodel,load_model
+from objdetect_inference import OBJDetectInference
+from utils.utils import load_model
 
 if __name__ == "__main__":
     '''
@@ -44,10 +45,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = json.load(open(args.environment_file, "r"))
     config_dict = json.load(open(args.config_file, "r"))
-    keys_trans = None
+    trans_dic = {}
     if config_dict.get("model","")=="vitdet":
-        keys_trans = transform_vitkeys_from_basemodel
-    pretrained_model = load_model(args.model,keys_trans)
+        trans_dic = {
+            '.patch_embed.proj': '.patch_embedding.patch_embeddings',
+            '.fc': '.linear',
+            'encoder.': 'feature_extractor.body.',
+        }
+    pretrained_model = load_model(args.model,transform_dic=trans_dic)
     debug_dict = {} #full test
     debug_dict['use_test'] = False
     if args.deter:

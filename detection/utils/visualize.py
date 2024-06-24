@@ -11,7 +11,29 @@
 
 import cv2
 import numpy as np
+from collections import OrderedDict
 
+def print_network_params(params: OrderedDict, show_grad: bool=True):
+    """
+    Print all network named parama
+
+    Args:
+        params: named params from net.named_parameters() dict
+        show_grad: show gradient or not
+    
+    Return:
+        None
+    """
+    v_n,v_v,v_g = [],[],[]
+    for name, para in params:
+        v_n.append(name)
+        v_v.append(para.detach().cpu().numpy() if para is not None else [0])
+        if show_grad:
+            v_g.append(para.grad.detach().cpu().numpy() if para.grad is not None else [0])
+    for i in range(len(v_n)):
+        print('value %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_v[i]).item(),np.max(v_v[i]).item(),np.mean(v_v[i]).item()))
+        if show_grad:
+            print('grad %s: %.3e ~ %.3e (avg: %.3e)'%(v_n[i],np.min(v_g[i]).item(),np.max(v_g[i]).item(),np.mean(v_v[i]).item()))
 
 def normalize_image_to_uint8(image):
     """

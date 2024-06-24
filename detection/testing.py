@@ -1,6 +1,6 @@
 import argparse
 import json
-from objdetect_inference import OBJDetectInference,transform_vitkeys_from_basemodel,load_model
+from objdetect_inference import OBJDetectInference
 
 if __name__ == "__main__":
     '''
@@ -44,10 +44,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = json.load(open(args.environment_file, "r"))
     config_dict = json.load(open(args.config_file, "r"))
-    keys_trans = None
-    if config_dict.get("model","")=="vitdet":
-        keys_trans = transform_vitkeys_from_basemodel
-    pretrained_model = load_model(args.model,keys_trans)
+    pretrained_model = None
     debug_dict = {} #full test
     debug_dict['use_train'] = False
     if args.deter:
