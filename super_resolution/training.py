@@ -1,7 +1,7 @@
 import argparse
 import yaml
 from super_resolution import SuperResolutionInference
-from ..utils.utils import load_model
+from utils.utils import load_model
 
 if __name__ == "__main__":
     '''

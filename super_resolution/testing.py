@@ -1,6 +1,7 @@
 import argparse
 import yaml
 from super_resolution import SuperResolutionInference
+from utils.utils import load_model
 
 if __name__ == "__main__":
     '''
@@ -44,10 +45,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
-    keys_trans = None
-    if config_dict.get("model","")=="vit":
-        keys_trans = transform_vitkeys_from_basemodel
-    pretrained_model = load_model(args.model,keys_trans)
+    pretrained_model = None
     debug_dict = {} #full test
     debug_dict['use_train'] = False
     if args.deter:
