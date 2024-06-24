@@ -30,7 +30,7 @@ from torch import Tensor, nn
 from torch.nn.utils.clip_grad import clip_grad_norm_
 
 from torch.utils.tensorboard import SummaryWriter
-from warmup_scheduler import GradualWarmupScheduler
+
 
 import monai
 from monai.apps.detection.metrics.coco import COCOMetric
@@ -49,6 +49,7 @@ from monai.utils import set_determinism
 
 from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RetinaNetDetector_debug
 from network.vitdet import vitdet_fpn_feature_extractor
+from network.warmup_scheduler import GradualWarmupScheduler
 from utils.utils import load_model
 from utils.visualize import visualize_one_xy_slice_in_3d_image,visualize_one_xy_slice_in_2d_image,print_network_params
 from utils.evaluation.detection_metric import mAP_with_IoU,mAR_with_IoU,AP_at_IoU
