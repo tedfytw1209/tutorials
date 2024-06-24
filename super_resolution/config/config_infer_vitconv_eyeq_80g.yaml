@@ -17,9 +17,9 @@ scale_factor : 4
 
 #train setting
 lr": 1.0e-4
-scheduler_step : 50
-scheduler_gamma : 0.1
+scheduler_step : 10
+scheduler_gamma : 0.3
 warmup_epochs : 10
 finetune_epochs : 200
 val_interval : 5
-batch_size : 8
+batch_size : 16
