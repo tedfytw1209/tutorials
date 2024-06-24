@@ -43,8 +43,8 @@ if __name__ == "__main__":
         help="set determinism for model (seed=0)",
     )
     args = parser.parse_args()
-    env_dict = yaml.load(open(args.environment_file, "r"))
-    config_dict = yaml.load(open(args.config_file, "r"))
+    env_dict = yaml.safe_load(open(args.environment_file, "r"))
+    config_dict = yaml.safe_load(open(args.config_file, "r"))
     transform_dic = {
         '.patch_embed.proj': '.patch_embedding.patch_embeddings', 
         '.fc': '.linear',
