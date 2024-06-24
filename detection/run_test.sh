@@ -16,4 +16,4 @@ module load singularity
 singularity exec --nv /blue/bianjiang/tienyuchang/monaicore1.3.0 python -c "import torch; print(torch.cuda.is_available())"
 
 # Run a tutorial python script within the container. Modify the path to your container and your script.
-singularity exec --nv /blue/bianjiang/tienyuchang/monaicore1.3.0 python testing.py -e ./config/environment_vit_luna16_fold0.json -c ./config/config_infer_vitdet2dimg_luna16_80g.json -d -m /blue/bianjiang/tienyuchang/basemodel/checkpoint_test.pth 
+singularity exec --nv /blue/bianjiang/tienyuchang/monaicore1.3.0 python testing.py -e ./config/environment_vit_luna16_fold0.yaml -c ./config/config_infer_vitdet2dimg_luna16_80g.yaml -d -m /blue/bianjiang/tienyuchang/basemodel/checkpoint_test.pth 

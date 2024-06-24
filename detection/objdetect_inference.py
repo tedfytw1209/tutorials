@@ -16,6 +16,7 @@ Copy and Modify from monai/tutorials/detection.
 import argparse
 import gc
 import json
+import yaml
 import logging
 import sys
 import time
@@ -633,7 +634,7 @@ class OBJDetectInference():
         return net
     #vitdet
     def build_vitdet(self, anchor_generator: AnchorGenerator):
-        # Parameter settings are in config.json file
+        # Parameter settings are in config.yaml file
         if hasattr(self.args,"model_spatial_dims"):
             model_spatial_dims = self.args.model_spatial_dims
         else:
@@ -768,14 +769,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-e",
         "--environment-file",
-        default="./config/environment.json",
-        help="environment json file that stores environment path",
+        default="./config/environment.yaml",
+        help="environment yaml file that stores environment path",
     )
     parser.add_argument(
         "-c",
         "--config-file",
-        default="./config/config_train.json",
-        help="config json file that stores hyper-parameters",
+        default="./config/config_train.yaml",
+        help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
         "-v",
@@ -804,8 +805,8 @@ if __name__ == "__main__":
         help="set determinism for model (seed=0)",
     )
     args = parser.parse_args()
-    env_dict = json.load(open(args.environment_file, "r"))
-    config_dict = json.load(open(args.config_file, "r"))
+    env_dict = yaml.safe_load(open(args.environment_file, "r"))
+    config_dict = yaml.safe_load(open(args.config_file, "r"))
     trans_dic = {}
     if config_dict.get("model","")=="vitdet":
         trans_dic = {
