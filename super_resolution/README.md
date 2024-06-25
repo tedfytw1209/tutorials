@@ -7,11 +7,12 @@ pip install -r requirements.txt
 #### [3.1 Super Resolution Training](./training.py)
 
 There are two aviable datasets: [Mednist](./config/environment_mednist.yaml) and [EyeQ](./config/environment_eyeq.yaml).
-Mednist:
+
+- Mednist:
     - environment_config: [environment_mednist.yaml](./config/environment_mednist.yaml)
     - train_config: [config_infer_vitconv_mednist_80g.yaml](./config/config_infer_vitconv_mednist_80g.yaml)
 
-EyeQ:
+- EyeQ:
     - environment_config: [environment_eyeq.yaml](./config/environment_eyeq.yaml)
     - train_config: [config_infer_vitconv_eyeq_80g.yaml](./config/config_infer_vitconv_eyeq_80g.yaml)
 
