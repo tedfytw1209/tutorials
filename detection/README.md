@@ -46,6 +46,6 @@ sbatch run_test.sh
 #### 3.3 See result
 You can see training step result and image by using `tensorboard`.
 Run
-'''bash
+```bash
 tensorboard --logdir [tfevent_path]
-'''
+```
