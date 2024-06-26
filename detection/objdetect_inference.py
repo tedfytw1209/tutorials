@@ -35,7 +35,7 @@ from torch.utils.tensorboard import SummaryWriter
 import monai
 from monai.apps.detection.metrics.coco import COCOMetric
 from monai.apps.detection.metrics.matching import matching_batch
-#from monai.apps.detection.networks.retinanet_detector import RetinaNetDetector
+from monai.apps.detection.networks.retinanet_detector import RetinaNetDetector
 from monai.apps.detection.networks.retinanet_network import (
     RetinaNet,
     resnet_fpn_feature_extractor,
@@ -47,7 +47,7 @@ from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
-from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RetinaNetDetector_debug
+from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet
 from network.vitdet import vitdet_fpn_feature_extractor
 from network.warmup_scheduler import GradualWarmupScheduler
 from utils.utils import load_model
@@ -263,7 +263,6 @@ class OBJDetectInference():
         # base_anchor_shapes: anchor shape for the most high-resolution output,
         #   when target boxes are small, set it smaller
         feature_map_scales = [2**l for l in range(len(self.args.returned_layers) + 1)]
-        print('feature_map_scales :',feature_map_scales)
         anchor_generator = AnchorGeneratorWithAnchorShape(
                 feature_map_scales=feature_map_scales,
                 base_anchor_shapes=self.args.base_anchor_shapes,
@@ -351,12 +350,6 @@ class OBJDetectInference():
                     for batch_data_i in batch_data
                     for batch_data_ii in batch_data_i
                 ]
-                '''print('Batch inputs len: ', len(inputs))
-                print('Batch targets len: ', len(targets))
-                for i in range(len(targets)):
-                    print("Inputs ",i," shape: ",inputs[i].shape)
-                    for k,v in targets[i].items():
-                        print("Targets ",k,",: ",v)'''
 
                 for param in detector.network.parameters():
                     param.grad = None
@@ -367,7 +360,6 @@ class OBJDetectInference():
                         loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     #with torch.autograd.detect_anomaly(): #for debug
                     scaler.scale(loss).backward()
-                    #print_network_params(detector.network.named_parameters())
                     #clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     scaler.step(optimizer)
                     scaler.update()
@@ -376,7 +368,6 @@ class OBJDetectInference():
                     loss = w_cls * outputs[detector.cls_key] + outputs[detector.box_reg_key]
                     #with torch.autograd.detect_anomaly(): #for debug
                     loss.backward()
-                    #print_network_params(detector.network.named_parameters())
                     #clip_grad_norm_(detector.network.parameters(), 50) #add grad clip to avoid nan
                     optimizer.step()
                 
@@ -391,7 +382,6 @@ class OBJDetectInference():
                 #tmp
                 #raise('Stop Training for debug')
             
-            #print_network_params(detector.network.named_parameters())
             end_time = time.time()
             print(f"Training time: {end_time-start_time}s")
             del inputs, batch_data
@@ -436,15 +426,6 @@ class OBJDetectInference():
                         # save outputs for evaluation
                         val_outputs_all += val_outputs
                         val_targets_all += val_data
-                #print val_ouputs
-                '''for i in range(1):
-                    print('Val sample ', i)
-                    print(' val_outputs ', detector.target_box_key, '=>shape: ',val_outputs_all[i][detector.target_box_key].shape, ', value:', val_outputs_all[i][detector.target_box_key])
-                    print(' val_outputs ', detector.target_label_key, '=>shape: ',val_outputs_all[i][detector.target_label_key].shape, ', value:', val_outputs_all[i][detector.target_label_key])
-                    print(' val_outputs ', detector.pred_score_key, '=>shape: ',val_outputs_all[i][detector.pred_score_key].shape, ', value:', val_outputs_all[i][detector.pred_score_key])
-                    print(' val_targets ', detector.target_box_key, '=>shape: ',val_targets_all[i][detector.target_box_key].shape, ', value:', val_targets_all[i][detector.target_box_key])
-                    print(' val_targets ', detector.target_label_key, '=>shape: ',val_targets_all[i][detector.target_label_key].shape, ', value:', val_targets_all[i][detector.target_label_key])
-                '''    
                 end_time = time.time()
                 print(f"Validation time: {end_time-start_time}s")
 
@@ -567,15 +548,6 @@ class OBJDetectInference():
                 gt_boxes=gt_boxes,
                 gt_classes=gt_classes,
             )
-            '''for i in range(1):
-                print('Test sample ', i)
-                print(' test_outputs ', detector.target_box_key, '=>shape: ',test_outputs_all[i][detector.target_box_key].shape, ', max:', test_outputs_all[i][detector.target_box_key].max(0),
-                      ', min:', test_outputs_all[i][detector.target_box_key].min(0))
-                print(' test_outputs ', detector.target_label_key, '=>shape: ',test_outputs_all[i][detector.target_label_key].shape, ', value:', test_outputs_all[i][detector.target_label_key])
-                print(' test_outputs ', detector.pred_score_key, '=>shape: ',test_outputs_all[i][detector.pred_score_key].shape, ', value:', test_outputs_all[i][detector.pred_score_key])
-                print(' test_targets ', detector.target_box_key, '=>shape: ',test_targets_all[i][detector.target_box_key].shape, ', value:', test_targets_all[i][detector.target_box_key])
-                print(' test_targets ', detector.target_label_key, '=>shape: ',test_targets_all[i][detector.target_label_key].shape, ', value:', test_targets_all[i][detector.target_label_key])
-            '''
             test_metric_dict = metric(results_metric)[0]
             print('Metric result:')
             print(test_metric_dict)
@@ -724,7 +696,7 @@ class OBJDetectInference():
         '''
         Build detector for rentinanet
         '''
-        detector = RetinaNetDetector_debug(network=net, anchor_generator=anchor_generator, debug=self.verbose, spatial_dims=self.args.spatial_dims).to(device)
+        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.verbose, spatial_dims=self.args.spatial_dims).to(device)
         #!!! need ask consider image mean and std or not?
         # set training components
         if train:

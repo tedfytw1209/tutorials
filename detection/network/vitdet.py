@@ -185,13 +185,10 @@ class LayerNorm(nn.Module):
         self.reset_parameters() #self initialize
 
     def forward(self, x):
-        #print('Layer Norm input shape: ', x.shape)
         u = x.detach().mean(1, keepdim=True)
         s = (x.detach() - u).pow(2).mean(1, keepdim=True)
         x = (x - u) / (torch.sqrt(s + self.eps) + self.eps)
-        #print('Layer Norm before wx+b shape: ', x.shape)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
-        #print('Layer Norm output shape: ', x.shape, 'wieght: ', self.weight.shape, 'bias: ', self.bias.shape)
         return x
 
     def reset_parameters(self) -> None:
@@ -510,9 +507,7 @@ class ViTDet(nn.Module):
             or feature maps (B, C, H/patch, W/patch, D) or (B, C, H/patch, W/patch)}
         """
         #PatchEmbeddingBlock Input: (B, C, H, W, D), Output: (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)
-        #print('Vitdet Input Shape: ', x.shape)
         x = self.patch_embedding(x)
-        #print('Vitdet Embed Shape: ', x.shape)
         if hasattr(self, "cls_token"):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
             x = torch.cat((cls_token, x), dim=1)
@@ -520,13 +515,11 @@ class ViTDet(nn.Module):
         for blk in self.blocks:
             x = blk(x)
             #hidden_states_out.append(x)
-        #print('Vitdet After Blocks Shape: ', x.shape)
         x = self.norm(x)
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
         # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
         x = x.transpose(-1,-2).reshape(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
-        #print('Vitdet Output Shape: ', x.shape)
         return {self._out_features[0]:x}
     
     def output_shape(self):
@@ -698,9 +691,7 @@ class SimpleFeaturePyramid(nn.Module):
         #bottom_up_features = self.net(x)
         bottom_up_features = x
         features = bottom_up_features[self.in_feature]
-        #print('SimpleFeaturePyramid Input Shape: ', features.shape)
         features = features.permute(0,3,1,2)
-        #print('SimpleFeaturePyramid After permute Shape: ', features.shape)
         results: list[Tensor] = []
 
         for stage in self.stages:
@@ -722,7 +713,6 @@ class LastLevelMaxPool(nn.Module):
     This module is used in the original FPN to generate a downsampled
     P6 feature from P5.
     """
-
     def __init__(self, spatial_dims: int = 2, in_feature: str = "feat2"):
         super().__init__()
         self.num_levels = 1
@@ -752,7 +742,6 @@ class BackboneWithFPN_vitdet(nn.Module):
         out_channels: number of channels in the FPN.
         spatial_dims: 2D or 3D images
     """
-
     def __init__(
         self,
         backbone: nn.Module,
@@ -793,19 +782,11 @@ class BackboneWithFPN_vitdet(nn.Module):
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
         features: dict[str, Tensor] = self.body(x)  # backbone
-        '''print('Vitdet Output Features Shape: ')
-        for k,v in features.items():
-            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=0),' ,range: ', v[0,:,:,:].min(dim=0), " ~ ", v[0,:,:,:].max(dim=0))
-        '''
         y: dict[str, Tensor] = self.fpn(features)  # FPN
         if self.dim_change_flag: #change back for detector used
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
         else:
             out_dict = y
-        '''print('BackboneWithFPN_vitdet Output Features Shape: ')
-        for k,v in out_dict.items():
-            print("Feature names: ", k, "=> shape: ", v[0,:,:,:].shape," , mean: ",v[0,:,:,:].mean(dim=0),' ,range: ', v[0,:,:,:].min(dim=0), " ~ ", v[0,:,:,:].max(dim=0))
-        '''
         return out_dict
         
 
@@ -892,331 +873,3 @@ def vitdet_fpn_feature_extractor(
         returned_layers=list(returned_layers)
     )
     return feature_extractor
-
-#detector only for testing
-class RetinaNetDetector_debug(RetinaNetDetector):
-    '''
-    RetinaNetDetector for debug use
-    '''
-    def __init__(
-        self,
-        network: nn.Module,
-        anchor_generator: AnchorGenerator,
-        box_overlap_metric: Callable = box_iou,
-        spatial_dims: int | None = None,  # used only when network.spatial_dims does not exist
-        num_classes: int | None = None,  # used only when network.num_classes does not exist
-        size_divisible: Sequence[int] | int = 1,  # used only when network.size_divisible does not exist
-        cls_key: str = "classification",  # used only when network.cls_key does not exist
-        box_reg_key: str = "box_regression",  # used only when network.box_reg_key does not exist
-        debug: bool = False,
-    ):
-        super().__init__(network,anchor_generator,box_overlap_metric,spatial_dims,num_classes,size_divisible,cls_key,box_reg_key,debug)
-    
-    def forward(
-        self,
-        input_images: list[Tensor] | Tensor,
-        targets: list[dict[str, Tensor]] | None = None,
-        use_inferer: bool = False,
-    ) -> dict[str, Tensor] | list[dict[str, Tensor]]:
-        """
-        Returns a dict of losses during training, or a list predicted dict of boxes and labels during inference.
-
-        Args:
-            input_images: The input to the model is expected to be a list of tensors, each of shape (C, H, W) or  (C, H, W, D),
-                one for each image, and should be in 0-1 range. Different images can have different sizes.
-                Or it can also be a Tensor sized (B, C, H, W) or  (B, C, H, W, D). In this case, all images have same size.
-            targets: a list of dict. Each dict with two keys: self.target_box_key and self.target_label_key,
-                ground-truth boxes present in the image (optional).
-            use_inferer: whether to use self.inferer, a sliding window inferer, to do the inference.
-                If False, will simply forward the network.
-                If True, will use self.inferer, and requires
-                ``self.set_sliding_window_inferer(*args)`` to have been called before.
-
-        Return:
-            If training mode, will return a dict with at least two keys,
-            including self.cls_key and self.box_reg_key, representing classification loss and box regression loss.
-
-            If evaluation mode, will return a list of detection results.
-            Each element corresponds to an images in ``input_images``, is a dict with at least three keys,
-            including self.target_box_key, self.target_label_key, self.pred_score_key,
-            representing predicted boxes, classification labels, and classification scores.
-
-        """
-        # 1. Check if input arguments are valid
-        if self.training:
-            targets = check_training_targets(
-                input_images, targets, self.spatial_dims, self.target_label_key, self.target_box_key
-            )
-            self._check_detector_training_components()
-
-        # 2. Pad list of images to a single Tensor `images` with spatial size divisible by self.size_divisible.
-        # image_sizes stores the original spatial_size of each image before padding.
-        images, image_sizes = preprocess_images(input_images, self.spatial_dims, self.size_divisible)
-
-        # 3. Generate network outputs. Use inferer only in evaluation mode.
-        if self.training or (not use_inferer):
-            head_outputs = self.network(images)
-            if isinstance(head_outputs, (tuple, list)):
-                tmp_dict = {}
-                tmp_dict[self.cls_key] = head_outputs[: len(head_outputs) // 2]
-                tmp_dict[self.box_reg_key] = head_outputs[len(head_outputs) // 2 :]
-                head_outputs = tmp_dict
-            else:
-                # ensure head_outputs is Dict[str, List[Tensor]]
-                ensure_dict_value_to_list_(head_outputs)
-        else:
-            if self.inferer is None:
-                raise ValueError(
-                    "`self.inferer` is not defined." "Please refer to function self.set_sliding_window_inferer(*)."
-                )
-            head_outputs = predict_with_inferer(
-                images, self.network, keys=[self.cls_key, self.box_reg_key], inferer=self.inferer
-            )
-        #print('Head outputs:')
-        #classification outs: cls_logits_maps[i] is a (B, num_anchors * num_classes, H_i, W_i) or (B, num_anchors * num_classes, H_i, W_i, D_i) Tensor
-        #regression outs: cls_logits_maps[i] is a (B, num_anchors * 2 * spatial_dims, H_i, W_i) or (B, num_anchors * 2 * spatial_dims, H_i, W_i, D_i)
-        '''
-        print(len(head_outputs[self.cls_key]))
-        for i in range(len(head_outputs[self.cls_key])):
-            cls_sample = head_outputs[self.cls_key][i][0]
-            reg_sample = head_outputs[self.box_reg_key][i][0]
-            print(i , "class head=> shape: ", cls_sample.shape, " max logits: ", torch.max(cls_sample)," mean logits: ",torch.mean(cls_sample))
-            print(i , "regression head=> shape: ", reg_sample.shape, " max regress: ", torch.max(reg_sample)," mean logits: ",torch.mean(reg_sample))
-        '''
-        # 4. Generate anchors and store it in self.anchors: List[Tensor]
-        self.generate_anchors(images, head_outputs)
-        # num_anchor_locs_per_level: List[int], list of HW or HWD for each level
-        num_anchor_locs_per_level = [x.shape[2:].numel() for x in head_outputs[self.cls_key]]
-
-        # 5. Reshape and concatenate head_outputs values from List[Tensor] to Tensor
-        # head_outputs, originally being Dict[str, List[Tensor]], will be reshaped to Dict[str, Tensor]
-        for key in [self.cls_key, self.box_reg_key]:
-            # reshape to Tensor sized(B, sum(HWA), self.num_classes) for self.cls_key
-            # or (B, sum(HWA), 2* self.spatial_dims) for self.box_reg_key
-            # A = self.num_anchors_per_loc
-            head_outputs[key] = self._reshape_maps(head_outputs[key])
-        '''print('Detector after reshape:')
-        print(len(head_outputs[self.cls_key]))
-        print(head_outputs[self.cls_key].shape)
-        cls_sample = head_outputs[self.cls_key]
-        reg_sample = head_outputs[self.box_reg_key]
-        print("class head=> shape: ", cls_sample.shape, " max logits: ", torch.max(cls_sample)," mean logits: ",torch.mean(cls_sample))
-        print("regression head=> shape: ", reg_sample.shape, " max regress: ", torch.max(reg_sample)," mean logits: ",torch.mean(reg_sample))
-        '''
-        '''
-        print('Anchors for sample',0)
-        print(self.anchors[0].shape)
-        print(self.anchors[0].min(0))
-        print(self.anchors[0].max(0))
-        print(self.anchors[0])
-        print('image_sizes for sample 0: ',image_sizes[0])
-        print('num_anchor_locs_per_level: ', num_anchor_locs_per_level[0])
-        '''
-        # 6(1). If during training, return losses
-        if self.training:
-            losses = self.compute_loss(head_outputs, targets, self.anchors, num_anchor_locs_per_level)  # type: ignore
-            '''print('Detector Loss:')
-            for k,v in head_outputs.items():
-                print(k , ": ", v.shape)'''
-            return losses
-        else:
-            # 6(2). If during inference, return detection results
-            detections = self.postprocess_detections(
-                head_outputs, self.anchors, image_sizes, num_anchor_locs_per_level  # type: ignore
-            )
-            return detections
-    
-    def compute_loss(
-        self,
-        head_outputs_reshape: dict[str, Tensor],
-        targets: list[dict[str, Tensor]],
-        anchors: list[Tensor],
-        num_anchor_locs_per_level: Sequence[int],
-    ) -> dict[str, Tensor]:
-        """
-        Compute losses.
-
-        Args:
-            head_outputs_reshape: reshaped head_outputs. ``head_output_reshape[self.cls_key]`` is a Tensor
-              sized (B, sum(HW(D)A), self.num_classes). ``head_output_reshape[self.box_reg_key]`` is a Tensor
-              sized (B, sum(HW(D)A), 2*self.spatial_dims)
-            targets: a list of dict. Each dict with two keys: self.target_box_key and self.target_label_key,
-                ground-truth boxes present in the image.
-            anchors: a list of Tensor. Each Tensor represents anchors for each image,
-                sized (sum(HWA), 2*spatial_dims) or (sum(HWDA), 2*spatial_dims).
-                A = self.num_anchors_per_loc.
-
-        Return:
-            a dict of several kinds of losses.
-        """
-        matched_idxs = self.compute_anchor_matched_idxs(anchors, targets, num_anchor_locs_per_level)
-
-        print('GT for sample',0)
-        print(targets[0][self.target_label_key])
-        print(targets[0][self.target_box_key])
-        print('Correspond Anchor: ', anchors[0][matched_idxs[0] > -1])
-        print('Class logits: ')
-        print(head_outputs_reshape[self.cls_key][0, matched_idxs[0] > -1])
-        print('Regression box:')
-        print(head_outputs_reshape[self.box_reg_key][0, matched_idxs[0] > -1])
-
-        losses_cls = self.compute_cls_loss(head_outputs_reshape[self.cls_key], targets, matched_idxs)
-        losses_box_regression = self.compute_box_loss(
-            head_outputs_reshape[self.box_reg_key], targets, anchors, matched_idxs
-        )
-        '''print('Detector output loss:')
-        print({self.cls_key: losses_cls, self.box_reg_key: losses_box_regression})'''
-        return {self.cls_key: losses_cls, self.box_reg_key: losses_box_regression}
-    #copy only for debug (print step result used)
-    def get_cls_train_sample_per_image(
-        self, cls_logits_per_image: Tensor, targets_per_image: dict[str, Tensor], matched_idxs_per_image: Tensor
-    ) -> tuple[Tensor, Tensor]:
-        """
-        Get samples from one image for classification losses computation.
-
-        Args:
-            cls_logits_per_image: classification logits for one image, (sum(HWA), self.num_classes)
-            targets_per_image: a dict with at least two keys: self.target_box_key and self.target_label_key,
-                ground-truth boxes present in the image.
-            matched_idxs_per_image: matched index, Tensor sized (sum(HWA),) or (sum(HWDA),)
-                Suppose there are M gt boxes. matched_idxs_per_image[i] is a matched gt index in [0, M - 1]
-                or a negative value indicating that anchor i could not be matched.
-                BELOW_LOW_THRESHOLD = -1, BETWEEN_THRESHOLDS = -2
-
-        Return:
-            paired predicted and GT samples from one image for classification losses computation
-        """
-
-        if torch.isnan(cls_logits_per_image).any() or torch.isinf(cls_logits_per_image).any():
-            if torch.is_grad_enabled():
-                print('NaN or Inf in predicted classification logits.')
-                print('cls_logits_per_image shape: ', cls_logits_per_image.shape)
-                print('cls_logits_per_image value: ', cls_logits_per_image)
-                for k,v in targets_per_image.items():
-                    print('targets_per_image k: ',k, v.shape)
-                    print(v)
-                print('matched_idxs_per_image shape: ', matched_idxs_per_image.shape)
-                print('matched_idxs_per_image value: ', matched_idxs_per_image)
-                raise ValueError("NaN or Inf in predicted classification logits.")
-            else:
-                warnings.warn("NaN or Inf in predicted classification logits.")
-
-        foreground_idxs_per_image = matched_idxs_per_image >= 0
-
-        num_foreground = int(foreground_idxs_per_image.sum())
-        num_gt_box = targets_per_image[self.target_box_key].shape[0]
-
-        if self.debug:
-            print(f"Number of positive (matched) anchors: {num_foreground}; Number of GT box: {num_gt_box}.")
-            if num_gt_box > 0 and num_foreground < 2 * num_gt_box:
-                print(
-                    f"Only {num_foreground} anchors are matched with {num_gt_box} GT boxes. "
-                    "Please consider adjusting matcher setting, anchor setting,"
-                    " or the network setting to change zoom scale between network output and input images."
-                )
-
-        # create the target classification with one-hot encoding
-        gt_classes_target = torch.zeros_like(cls_logits_per_image)  # (sum(HW(D)A), self.num_classes)
-        gt_classes_target[
-            foreground_idxs_per_image,  # fg anchor idx in
-            targets_per_image[self.target_label_key][
-                matched_idxs_per_image[foreground_idxs_per_image]
-            ],  # fg class label
-        ] = 1.0
-
-        if self.fg_bg_sampler is None:
-            # if no balanced sampling
-            valid_idxs_per_image = matched_idxs_per_image != self.proposal_matcher.BETWEEN_THRESHOLDS
-        else:
-            # The input of fg_bg_sampler: list of tensors containing -1, 0 or positive values.
-            # Each tensor corresponds to a specific image.
-            # -1 values are ignored, 0 are considered as negatives and > 0 as positives.
-
-            # matched_idxs_per_image (Tensor[int64]): an N tensor where N[i] is a matched gt in
-            # [0, M - 1] or a negative value indicating that prediction i could not
-            # be matched. BELOW_LOW_THRESHOLD = -1, BETWEEN_THRESHOLDS = -2
-            if isinstance(self.fg_bg_sampler, HardNegativeSampler):
-                max_cls_logits_per_image = torch.max(cls_logits_per_image.to(torch.float32), dim=1)[0]
-                sampled_pos_inds_list, sampled_neg_inds_list = self.fg_bg_sampler(
-                    [matched_idxs_per_image + 1], max_cls_logits_per_image
-                )
-            elif isinstance(self.fg_bg_sampler, BalancedPositiveNegativeSampler):
-                sampled_pos_inds_list, sampled_neg_inds_list = self.fg_bg_sampler([matched_idxs_per_image + 1])
-            else:
-                raise NotImplementedError(
-                    "Currently support torchvision BalancedPositiveNegativeSampler and monai HardNegativeSampler matcher. "
-                    "Other types of sampler not supported. "
-                    "Please override self.get_cls_train_sample_per_image(*) for your own sampler."
-                )
-
-            sampled_pos_inds = torch.where(torch.cat(sampled_pos_inds_list, dim=0))[0]
-            sampled_neg_inds = torch.where(torch.cat(sampled_neg_inds_list, dim=0))[0]
-            valid_idxs_per_image = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
-        #print('cls_logits_per_image[valid_idxs_per_image, :]', cls_logits_per_image[valid_idxs_per_image, :])
-        #print('gt_classes_target[valid_idxs_per_image, :]', gt_classes_target[valid_idxs_per_image, :])
-        return cls_logits_per_image[valid_idxs_per_image, :], gt_classes_target[valid_idxs_per_image, :]
-
-    def get_box_train_sample_per_image(
-        self,
-        box_regression_per_image: Tensor,
-        targets_per_image: dict[str, Tensor],
-        anchors_per_image: Tensor,
-        matched_idxs_per_image: Tensor,
-    ) -> tuple[Tensor, Tensor]:
-        """
-        Get samples from one image for box regression losses computation.
-
-        Args:
-            box_regression_per_image: box regression result for one image, (sum(HWA), 2*self.spatial_dims)
-            targets_per_image: a dict with at least two keys: self.target_box_key and self.target_label_key,
-                ground-truth boxes present in the image.
-            anchors_per_image: anchors of one image,
-                sized (sum(HWA), 2*spatial_dims) or (sum(HWDA), 2*spatial_dims).
-                A = self.num_anchors_per_loc.
-            matched_idxs_per_image: matched index, sized (sum(HWA),) or  (sum(HWDA),)
-
-        Return:
-            paired predicted and GT samples from one image for box regression losses computation
-        """
-
-        if torch.isnan(box_regression_per_image).any() or torch.isinf(box_regression_per_image).any():
-            if torch.is_grad_enabled():
-                print('NaN or Inf in predicted classification logits.')
-                print('cls_logits_per_image shape: ', box_regression_per_image.shape)
-                print('cls_logits_per_image value: ', box_regression_per_image)
-                for k,v in targets_per_image.items():
-                    print('targets_per_image k: ',k, v.shape)
-                    print(v)
-                print('matched_idxs_per_image shape: ', matched_idxs_per_image.shape)
-                print('matched_idxs_per_image value: ', matched_idxs_per_image)
-                raise ValueError("NaN or Inf in predicted box regression.")
-            else:
-                warnings.warn("NaN or Inf in predicted box regression.")
-
-        foreground_idxs_per_image = torch.where(matched_idxs_per_image >= 0)[0]
-        num_gt_box = targets_per_image[self.target_box_key].shape[0]
-
-        # if no GT box, return empty arrays
-        if num_gt_box == 0:
-            return box_regression_per_image[0:0, :], box_regression_per_image[0:0, :]
-
-        # select only the foreground boxes
-        # matched GT boxes for foreground anchors
-        matched_gt_boxes_per_image = targets_per_image[self.target_box_key][
-            matched_idxs_per_image[foreground_idxs_per_image]
-        ].to(box_regression_per_image.device)
-        # predicted box regression for foreground anchors
-        box_regression_per_image = box_regression_per_image[foreground_idxs_per_image, :]
-        # foreground anchors
-        anchors_per_image = anchors_per_image[foreground_idxs_per_image, :]
-
-        # encode GT boxes or decode predicted box regression before computing losses
-        matched_gt_boxes_per_image_ = matched_gt_boxes_per_image
-        box_regression_per_image_ = box_regression_per_image
-        if self.encode_gt:
-            matched_gt_boxes_per_image_ = self.box_coder.encode_single(matched_gt_boxes_per_image_, anchors_per_image)
-        if self.decode_pred:
-            box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
-        #print('box_regression_per_image_', box_regression_per_image_)
-        #print('matched_gt_boxes_per_image_',matched_gt_boxes_per_image_)
-        return box_regression_per_image_, matched_gt_boxes_per_image_
