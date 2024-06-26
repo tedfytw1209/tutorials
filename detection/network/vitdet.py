@@ -952,6 +952,9 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         # 2. Pad list of images to a single Tensor `images` with spatial size divisible by self.size_divisible.
         # image_sizes stores the original spatial_size of each image before padding.
         images, image_sizes = preprocess_images(input_images, self.spatial_dims, self.size_divisible)
+        for i in range(images.shape[0]):
+            sample = images[i].detach().cpu()
+            print(i , "shape: ", sample.shape, " max: ", torch.max(sample)," mean: ",torch.mean(sample))
 
         # 3. Generate network outputs. Use inferer only in evaluation mode.
         if self.training or (not use_inferer):
