@@ -1,6 +1,7 @@
 ---
 model: retinanet
 gt_box_mode: cccwhd
+amp: False
 lr: 0.01
 finetune_epochs: 50
 val_interval: 5

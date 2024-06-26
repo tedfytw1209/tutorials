@@ -1,6 +1,7 @@
 ---
 model: vitdet
 gt_box_mode: cccwhd
+amp: False
 lr: 0.01
 w_cls: 1
 finetune_epochs: 100

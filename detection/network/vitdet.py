@@ -895,6 +895,9 @@ def vitdet_fpn_feature_extractor(
 
 #detector only for testing
 class RetinaNetDetector_debug(RetinaNetDetector):
+    '''
+    RetinaNetDetector for debug use
+    '''
     def __init__(
         self,
         network: nn.Module,

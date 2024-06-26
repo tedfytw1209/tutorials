@@ -75,6 +75,10 @@ class OBJDetectInference():
         compute: run for inference
         train: training process
         test: testing process
+        make_train_datasets
+        make_test_datasets
+        build_net
+        build_detector
     """
     def __init__(
         self,
@@ -83,7 +87,7 @@ class OBJDetectInference():
         debug_dict: dict,
         verbose: bool = False,
     ):
-        amp = False
+        amp = config_dict.get('amp', False)
         if amp:
             self.compute_dtype = torch.float16
         else:
@@ -592,6 +596,11 @@ class OBJDetectInference():
             json.dump(test_metric_dict, outfile, indent=4)
     #build Network
     def build_net(self,anchor_generator: AnchorGenerator):
+        '''
+        Build Net for 
+            input: (B, C, H, W) or (B, C, H, W, D)
+            output: Dict[str, List[Tensor]] or Dict[str, Tensor] with shape (B,C, H^i, W^i) or  (B, C, H^i, W^i, D^i)
+        '''
         if self.model_name=='retinanet':
             net = self.build_retinanet(anchor_generator)
         elif self.model_name=='vitdet':
@@ -712,6 +721,9 @@ class OBJDetectInference():
     
     #retinanet
     def build_retinanet_detector(self,net,anchor_generator,device,train=True,valid=True):
+        '''
+        Build detector for rentinanet
+        '''
         detector = RetinaNetDetector_debug(network=net, anchor_generator=anchor_generator, debug=self.verbose, spatial_dims=self.args.spatial_dims).to(device)
         #!!! need ask consider image mean and std or not?
         # set training components
@@ -744,6 +756,13 @@ class OBJDetectInference():
 
     #training settings
     def train_setting(self,detector):
+        '''
+        Create optimizer, scheduler, and scaler based on config
+        Returns:
+            optimizer
+            scheduler
+            scaler
+        '''
         optimizer = torch.optim.SGD(
             detector.network.parameters(),
             self.args.lr,
