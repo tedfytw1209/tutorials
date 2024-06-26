@@ -14,6 +14,9 @@ from typing import Iterable, Optional, TypeVar
 TStructuralSimilarity = TypeVar("TStructuralSimilarity")
 
 class StructuralSimilarity_gray(StructuralSimilarity):
+    '''
+    Code from torcheval.metrics.image.ssim.StructuralSimilarity and modify for gray image
+    '''
     @torch.inference_mode()
     # pyre-ignore[14]: `update` overrides method defined in `Metric` inconsistently.
     def update(

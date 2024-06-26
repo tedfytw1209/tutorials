@@ -4,10 +4,6 @@ from super_resolution import SuperResolutionInference
 from utils.utils import load_model
 
 if __name__ == "__main__":
-    '''
-    Only for testing all functions in SuperResolutionInference.
-    set the part what to test (full obj detect, only train, only test, with pre-trained model).
-    '''
     #get the config, env, and pre_train network
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(

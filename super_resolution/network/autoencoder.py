@@ -45,6 +45,11 @@ class Lazy_Autoencoder(nn.Module):
         decoder: nn.Module,
         latent_img_shape: Sequence[int],
     ):
+        """
+        Args:
+            encoder: nn.Module with input shape (B, C, H, W)
+            decoder: nn.Module with input shape (B, C, H', W') and output (B, C, H'', W'')
+        """
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
@@ -55,10 +60,10 @@ class Lazy_Autoencoder(nn.Module):
         """forward
 
         Args:
-            x (tensor): Input image with shape (B, C, H, W, D) or (B, C, H, W)
+            x (tensor): Input image with shape (B, C, H, W)
 
         Returns:
-            Output x: Output super resolution image with shape (B, C, H, W, D) or (B, C, H, W)
+            Output x: Output super resolution image with shape (B, C, H, W)
         """
         latent, _ = self.encoder(x) #latent: (B,HW,C)
         latent_x = latent.transpose(1,2).reshape(self.latent_img_shape) #(B,HW,C)->(B,C,HW)->(B,C,H,W)
@@ -66,13 +71,13 @@ class Lazy_Autoencoder(nn.Module):
         return out_img
     
     def forward_with_latent(self, x: Tensor) -> tuple[Tensor, Tensor]:
-        """forward
+        """forward with latent
 
         Args:
-            x (tensor): Input image with shape (B, C, H, W, D) or (B, C, H, W)
+            x (tensor): Input image with shape (B, C, H, W)
 
         Returns:
-            Output x: Output super resolution image with shape (B, C, H, W, D) or (B, C, H, W)
+            Output x: Output super resolution image with shape (B, C, H, W)
             Output lantent: Output latent feature with shape (B,HW,C)
         """
         latent, _ = self.encoder(x)
@@ -89,6 +94,15 @@ class Conv_decoder(nn.Module):
         use_layer_norm: bool = True,
         act_func: nn.Module = nn.GELU,
     ):
+        """
+        Args:
+            in_channels: int, input hidden num
+            out_channels: int, output channel num (1 or 3)
+            scale_factor: int, scale factor from input to output, need to be 2^n
+            conv_bias: bool = True, use bias in Conv layer or not
+            use_layer_norm: bool = True, use layer norm or not
+            act_func: nn.Module = nn.GELU, activation functions
+        """
         super().__init__()
         if use_layer_norm:
             norm_func = LayerNorm
@@ -114,6 +128,14 @@ class Conv_decoder(nn.Module):
         self.stages.append(last_conv)
         
     def forward(self, x: Tensor) -> Tensor:
+        """forward
+
+        Args:
+            x (tensor): Output from encoder with shape (B, C, H', W')
+
+        Returns:
+            Output x: Output super resolution image with shape (B, C, H, W)
+        """
         for stage in self.stages:
             x = stage(x)
         return x

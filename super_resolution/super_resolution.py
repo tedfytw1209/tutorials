@@ -64,7 +64,7 @@ class SuperResolutionInference():
         debug_dict: dict,
         verbose: bool = False,
     ):
-        amp = False
+        amp = config_dict.get('amp',False)
         if amp:
             self.compute_dtype = torch.float16
         else:
@@ -221,11 +221,10 @@ class SuperResolutionInference():
         3. Training (Finetuning)
         4. Evaluation (Testing)
         Args:
-            inputs: input of the model inference.
-            pre_train_network: model for inference.
-
-        Returns:
-            dict: dictionary with values for evaluation (include metric in train and test)
+            metric_dic: dict for {metric_name: metric_func}
+            device
+            pre_net: pre-train model
+        Save model to self.env_dict["model_path"]
         """
         # 1-2. build network & load pre-train network
         net = self.build_net().to(device)
@@ -406,6 +405,16 @@ class SuperResolutionInference():
     
     #4. Test
     def test(self, metric_dic, device,net=None):
+        """
+        Testing
+        Args:
+            metric_dic: dict for {metric_name: metric_func}
+            device
+            net: trained model for inference.
+
+        Returns:
+            dict: dictionary with values for evaluation (include metric in train and test)
+        """
         # 2) build test network
         if net==None:
             net = torch.jit.load(self.env_dict["model_path"]).to(device)
@@ -449,9 +458,15 @@ class SuperResolutionInference():
         test_metric_dict = {f'test_{k}': v for k,v in epoch_metric_val.items()}
         with open(self.args.result_list_file_path, "w") as outfile:
             json.dump(test_metric_dict, outfile, indent=4)
+        return test_metric_dict
             
     #build Network
     def build_net(self):
+        '''
+        Build Autoencoder Network
+        Returns:
+            net
+        '''
         encoder, decoder = self.build_encoder_decoder()
         total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
         latent_size = int(self.args.img_size / total_scale_factor)
@@ -465,6 +480,12 @@ class SuperResolutionInference():
     
     #vitdet
     def build_encoder_decoder(self):
+        '''
+        Build Encoder and Decoder
+        Returns:
+            encoder
+            decoder
+        '''
         model_spatial_dims = self.args.spatial_dims
         total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
         low_resol_img_size = int(self.args.img_size // self.args.scale_factor)
@@ -493,6 +514,13 @@ class SuperResolutionInference():
 
     #training settings
     def train_setting(self,net):
+        '''
+        Create optimizer, scheduler, and scaler based on config
+        Returns:
+            optimizer
+            scheduler
+            scaler
+        '''
         optimizer = torch.optim.Adam(net.parameters(), lr=self.args.lr)
         
         after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
@@ -505,16 +533,16 @@ class SuperResolutionInference():
         return optimizer, scheduler, scaler
     #loss func
     def get_loss_func_dic(self,device):
+        '''
+        Returns:
+            dict: ['percep': PerceptualLoss, 'l1': nn.L1Loss, 'mse': nn.MSELoss]
+        '''
         loss_1 = PerceptualLoss(spatial_dims=self.args.spatial_dims).to(device)
         loss_2 = nn.L1Loss().to(device)
         loss_3 = nn.MSELoss().to(device)
         return {'percep': loss_1, 'l1': loss_2, 'mse': loss_3}
     
 if __name__ == "__main__":
-    '''
-    Only for testing all functions in OBJDetectInference.
-    set the part what to test (full obj detect, only train, only test, with pre-trained model).
-    '''
     #get the config, env, and pre_train network
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(
