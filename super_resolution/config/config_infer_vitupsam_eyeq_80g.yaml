@@ -1,5 +1,5 @@
 # architecture
-model": "vit"
+model: "vit"
 spatial_dims : 2
 embed_dim : 768
 depth : 12
@@ -19,7 +19,7 @@ img_size : 2048
 scale_factor : 4
 
 #train setting
-lr": 1.0e-4
+lr: 1.0e-4
 scheduler_step : 10
 scheduler_gamma : 0.3
 warmup_epochs : 10
