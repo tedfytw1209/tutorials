@@ -2,7 +2,7 @@
 model: vitdet
 gt_box_mode: cccwhd
 amp: False
-lr: 0.0001
+lr: 0.01
 w_cls: 1
 finetune_epochs: 100
 val_interval: 5
@@ -30,7 +30,6 @@ score_thresh: 0.02
 nms_thresh: 0.22
 returned_layers:
 - 1
-- 2
 embed_dim: 768
 depth: 12
 num_heads: 12
@@ -41,7 +40,6 @@ model_patch_size: 16
 window_size: 6
 mlp_dim: 3072
 scale_factors:
-- 4
 - 2
 - 1
 window_block_indexes:
