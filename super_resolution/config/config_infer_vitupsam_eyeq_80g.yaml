@@ -13,7 +13,7 @@ conv_bias: False
 conv_layernorm: False
 
 #dataset info
-dataset": "eyeq"
+dataset: "eyeq"
 data_channels : 3
 img_size : 2048
 scale_factor : 4
