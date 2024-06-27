@@ -8,6 +8,9 @@ num_heads : 12
 out_channels: 256
 model_patch_size: 8 
 mlp_dim : 3072
+decoder_type: 'conv'
+conv_bias: True
+conv_layernorm: True
 
 #dataset info
 dataset: mednist

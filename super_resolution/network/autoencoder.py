@@ -9,6 +9,8 @@ from torch import Tensor, nn
 from torch.nn import init
 import torch.nn.functional as F
 
+from monai.networks.blocks import SubpixelUpsample
+
 class LayerNorm(nn.Module):
     """
     A LayerNorm variant, popularized by Transformers, that performs point-wise mean and
@@ -141,5 +143,57 @@ class Conv_decoder(nn.Module):
         return x
 
 ###!!! not implement now
-class UNETR_decoder(nn.Module):
-    pass
+class Upsample_decoder(nn.Module):
+    def __init__(self,
+        in_channels: int,
+        out_channels: int,
+        scale_factor: int,
+        conv_bias: bool = False,
+        use_layer_norm: bool = True,
+        act_func: nn.Module = nn.LeakyReLU,
+    ):
+        """
+        Args:
+            in_channels: int, input hidden num
+            out_channels: int, output channel num (1 or 3)
+            scale_factor: int, scale factor from input to output, need to be 2^n
+            conv_bias: bool = True, use bias in Conv layer or not
+            use_layer_norm: bool = True, use layer norm or not
+            act_func: nn.Module = nn.LeakyReLU, activation functions
+        """
+        super().__init__()
+        if use_layer_norm:
+            norm_func = LayerNorm
+        else:
+            norm_func = nn.Identity
+        
+        scale_factor_pow = int(math.log2(scale_factor)) #2^x of scale factor
+        self.stages = nn.ModuleList()
+        scale_w = scale_factor
+        hidden_num = in_channels
+        for stage in range(scale_factor_pow):
+            hidden_num_out = int(max(hidden_num//2, 16))
+            layers = [
+                    SubpixelUpsample(2,hidden_num, hidden_num_out, scale_factor=2, bias=conv_bias),
+                    norm_func(hidden_num_out,eps=1e-5),
+                    act_func(),
+                    ]
+            layers = nn.Sequential(*layers)
+            self.stages.append(layers)
+            hidden_num = hidden_num_out
+            scale_w = int(max(hidden_num//2, 1)) 
+        last_conv = nn.Conv2d(hidden_num, out_channels, 3, 1, 1)
+        self.stages.append(last_conv)
+        
+    def forward(self, x: Tensor) -> Tensor:
+        """forward
+
+        Args:
+            x (tensor): Output from encoder with shape (B, C, H', W')
+
+        Returns:
+            Output x: Output super resolution image with shape (B, C, H, W)
+        """
+        for stage in self.stages:
+            x = stage(x)
+        return x
