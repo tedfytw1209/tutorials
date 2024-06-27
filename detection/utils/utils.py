@@ -40,7 +40,7 @@ def load_model(path=None,transform_dic={}):
         elif '.pth' in path:
             state = torch.load(path, map_location='cpu')
             model = state['state_dict']
-        model = transform_keys(model,transform_dic)
+        model = transform_keys(model,transform_dic,True)
     else:
         model = None
     return model
