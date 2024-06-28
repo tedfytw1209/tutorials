@@ -6,6 +6,7 @@ lr: 0.01
 scheduler_step : 10
 scheduler_gamma : 0.3
 warmup_epochs : 10
+warmup_multi : 1
 finetune_epochs: 50
 val_interval: 5
 spacing:

@@ -764,8 +764,8 @@ class OBJDetectInference():
             weight_decay=3e-5,
             nesterov=True,
         )
-        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1) #150->50
-        scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=10, after_scheduler=after_scheduler)
+        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
+        scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=self.args.warmup_multi, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
         scaler = torch.cuda.amp.GradScaler() if self.amp else None
         scheduler = scheduler_warmup
         optimizer.zero_grad()
