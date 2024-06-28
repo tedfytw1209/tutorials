@@ -742,8 +742,8 @@ class OBJDetectInference():
             weight_decay=3e-5,
             nesterov=True,
         )
-        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1) #150->50
-        scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=10, after_scheduler=after_scheduler)
+        after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
+        scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=self.args.warmup_multi, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
         scaler = torch.cuda.amp.GradScaler() if self.amp else None
         scheduler = scheduler_warmup
         optimizer.zero_grad()
@@ -800,13 +800,11 @@ if __name__ == "__main__":
     env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
     trans_dic = {}
+    state_key = 'state_dict'
     if config_dict.get("model","")=="vitdet":
-        trans_dic = {
-            '.patch_embed.proj': '.patch_embedding.patch_embeddings',
-            '.fc': '.linear',
-            'encoder.': 'feature_extractor.body.',
-        }
-    pretrained_model = load_model(args.model,transform_dic=trans_dic)
+        trans_dic = config_dict['trans_dic']
+        state_key = config_dict['state_key']
+    pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
     test_mode = args.testmode
     debug_dict = {} #full test
     if args.testmode=='train': #train func test

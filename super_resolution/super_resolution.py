@@ -37,7 +37,7 @@ from monai.losses import PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
 from utils.transform.superresolution import generate_train_transforms, generate_validation_transforms
-from network.autoencoder import Lazy_Autoencoder, Conv_decoder
+from network.autoencoder import Lazy_Autoencoder, Conv_decoder, Upsample_decoder
 from utils.visualize import visualize_image_tf, print_network_params
 from utils.utils import load_model
 from utils.evaluation.superresolution_metric import PSNR, SSIM
@@ -502,12 +502,19 @@ class SuperResolutionInference():
                 qkv_bias=True,
                 )
         
-        decoder = Conv_decoder(
+        if self.args.decoder_type=='conv':
+            decoder_func = Conv_decoder
+        elif self.args.decoder_type=='upsample':
+            decoder_func = Upsample_decoder
+        else:
+            raise('Unknown decoder type')
+        
+        decoder = decoder_func(
             in_channels=self.args.embed_dim,
             out_channels=self.args.n_input_channels,
             scale_factor=total_scale_factor, # 4*16 in mednist
-            conv_bias=True,
-            use_layer_norm=True,
+            conv_bias=self.args.conv_bias,
+            use_layer_norm=self.args.conv_layernorm,
             )
         
         return encoder, decoder
@@ -524,7 +531,7 @@ class SuperResolutionInference():
         optimizer = torch.optim.Adam(net.parameters(), lr=self.args.lr)
         
         after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
-        scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
+        scheduler = GradualWarmupScheduler(optimizer, multiplier=self.args.warmup_multi, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
         scaler = torch.cuda.amp.GradScaler() if self.amp else None
         
         optimizer.zero_grad()

@@ -8,6 +8,9 @@ num_heads : 12
 out_channels: 256
 model_patch_size: 8 
 mlp_dim : 3072
+decoder_type: 'conv'
+conv_bias: True
+conv_layernorm: True
 
 #dataset info
 dataset: mednist
@@ -20,6 +23,7 @@ lr: 5.0e-5
 scheduler_step: 50
 scheduler_gamma: 0.1
 warmup_epochs: 10
+warmup_multi : 1
 finetune_epochs: 200
 val_interval: 5
 batch_size: 128

@@ -8,9 +8,9 @@ out_channels : 256
 model_patch_size : 16
 mlp_dim : 3072
 n_input_channels : 1
-decoder_type: 'conv'
-conv_bias: True
-conv_layernorm: True
+decoder_type: 'upsample'
+conv_bias: False
+conv_layernorm: False
 
 #dataset info
 dataset: "eyeq"
