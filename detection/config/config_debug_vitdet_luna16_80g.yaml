@@ -3,6 +3,9 @@ model: vitdet
 gt_box_mode: cccwhd
 amp: False
 lr: 0.01
+scheduler_step : 10
+scheduler_gamma : 0.3
+warmup_epochs : 10
 w_cls: 1
 finetune_epochs: 100
 val_interval: 5
