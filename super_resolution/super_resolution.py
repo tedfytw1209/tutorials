@@ -531,7 +531,7 @@ class SuperResolutionInference():
         optimizer = torch.optim.Adam(net.parameters(), lr=self.args.lr)
         
         after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
-        scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
+        scheduler = GradualWarmupScheduler(optimizer, multiplier=self.args.warmup_multi, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
         scaler = torch.cuda.amp.GradScaler() if self.amp else None
         
         optimizer.zero_grad()

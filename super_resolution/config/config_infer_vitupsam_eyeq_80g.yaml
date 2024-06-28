@@ -23,6 +23,7 @@ lr: 1.0e-4
 scheduler_step : 10
 scheduler_gamma : 0.3
 warmup_epochs : 10
+warmup_multi : 1
 finetune_epochs : 200
 val_interval : 5
 batch_size : 16
