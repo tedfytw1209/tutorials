@@ -32,14 +32,14 @@ def transform_keys(state_dict: OrderedDict, transform_dic: dict = {}, visualize:
         print([(k,v) for k, v in names_dict.items()])
     return new_state_dict
 
-def load_model(path=None,transform_dic={}):
+def load_model(path=None,state_key='state_dict',transform_dic={}):
     if path:  # make sure to load pretrained model
         if '.ckpt' in path:
             state = torch.load(path, map_location='cpu')
             model = state
         elif '.pth' in path:
             state = torch.load(path, map_location='cpu')
-            model = state['state_dict']
+            model = state[state_key]
         model = transform_keys(model,transform_dic,True)
     else:
         model = None

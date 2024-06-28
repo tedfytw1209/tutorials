@@ -70,3 +70,8 @@ base_anchor_shapes:
 - - 10
   - 10
 balanced_sampler_pos_fraction: 0.6
+state_key: state_dict
+trans_dic:
+  .patch_embed.proj: .patch_embedding.patch_embeddings
+  .fc: .linear
+  encoder.: feature_extractor.body.

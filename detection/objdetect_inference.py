@@ -822,13 +822,11 @@ if __name__ == "__main__":
     env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
     trans_dic = {}
+    state_key = 'state_dict'
     if config_dict.get("model","")=="vitdet":
-        trans_dic = {
-            '.patch_embed.proj': '.patch_embedding.patch_embeddings',
-            '.fc': '.linear',
-            'encoder.': 'feature_extractor.body.',
-        }
-    pretrained_model = load_model(args.model,transform_dic=trans_dic)
+        trans_dic = config_dict['trans_dic']
+        state_key = config_dict['state_key']
+    pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
     test_mode = args.testmode
     debug_dict = {} #full test
     if args.testmode=='train': #train func test
