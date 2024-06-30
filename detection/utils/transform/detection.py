@@ -367,10 +367,6 @@ class SelectTo2D(MapTransform):
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
-        '''print('Trans SelectTo2D Input:')
-        for k in [self.image_keys[0],self.box_keys]:
-            v = d[k]
-            print(k, ": shape", v.shape)'''
         #box z, !! only select first box's mean
         box_arr = d[self.box_keys].cpu().detach().numpy()
         if box_arr.shape[0]>1:
