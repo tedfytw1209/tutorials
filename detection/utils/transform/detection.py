@@ -373,18 +373,26 @@ class SelectTo2D(MapTransform):
             print(k, ": shape", v.shape)'''
         #box z, !! only select first box's mean
         box_arr = d[self.box_keys].cpu().detach().numpy()
-        z_min = box_arr[0,2]
-        z_max = box_arr[0,5]
-        z_center = int((z_min + z_max) / 2)
+        if box_arr.shape[0]>1:
+            z_all_min = np.max(box_arr[:,2])
+            z_all_max = np.min(box_arr[:,5])
+            z_center = int((box_arr[0,2] + box_arr[0,5]) / 2)
+            if z_all_max > z_all_min:
+                z_center = int((z_all_max + z_all_min) / 2)
+            else:
+                d[self.box_keys] = d[self.box_keys][0,:] #select first box
+        elif box_arr.shape[0]==1:
+            z_min = box_arr[0,2]
+            z_max = box_arr[0,5]
+            z_center = int((z_min + z_max) / 2)
+        else:
+            z_center = 0
         print(box_arr)
         print('z_center: ',z_center)
         ### select med image in z domain and change shape
         image_key = self.image_keys[0]
         tmp = d[image_key]
-        if tmp.shape[3]==1:
-            tmp = tmp[:,:,:,0]
-        else:
-            tmp = tmp[:,:,:,z_center]
+        tmp = tmp[:,:,:,z_center]
         d[image_key] = tmp
         
         ### create new box value
