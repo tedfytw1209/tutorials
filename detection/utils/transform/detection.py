@@ -380,7 +380,7 @@ class SelectTo2D(MapTransform):
             if z_all_max > z_all_min:
                 z_center = int((z_all_max + z_all_min) / 2)
             else:
-                d[self.box_keys] = d[self.box_keys][0,:] #select first box
+                d[self.box_keys] = d[self.box_keys][0:1,:] #select first box
         elif box_arr.shape[0]==1:
             z_min = box_arr[0,2]
             z_max = box_arr[0,5]
