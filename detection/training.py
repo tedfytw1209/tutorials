@@ -45,11 +45,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
+    pretrain_dict = yaml.safe_load(open(args.pretrain_config, "r"))
     trans_dic = {}
     state_key = 'state_dict'
     if config_dict.get("model","")=="vitdet":
-        trans_dic = config_dict['trans_dic']
-        state_key = config_dict['state_key']
+        trans_dic = pretrain_dict['trans_dic']
+        state_key = pretrain_dict['state_key']
     pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
     debug_dict = {} #full test
     debug_dict['use_test'] = False

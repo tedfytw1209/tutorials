@@ -71,10 +71,3 @@ finetune_epochs: 50
 val_interval: 5
 amp: False
 batch_size: 8
-
-#pre-train model
-state_key: state_dict
-trans_dic:
-  .patch_embed.proj: .patch_embedding.patch_embeddings
-  .fc: .linear
-  encoder.: feature_extractor.body.
