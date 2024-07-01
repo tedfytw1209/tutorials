@@ -8,7 +8,7 @@ num_heads: 12
 dp: 0
 img_size: 192
 out_channels: 256
-model_patch_size: 14
+model_patch_size: 16
 window_size: 7
 mlp_dim: 3072
 n_input_channels: 1
