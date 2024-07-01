@@ -1,5 +1,5 @@
 #pre-trained model
-state_key: state_dict
+state_key: ''
 trans_dic:
   .patch_embed.proj: .patch_embedding.patch_embeddings
   .fc: .linear
