@@ -1,6 +1,6 @@
 #pre-trained model
 state_key: state_dict
 trans_dic:
-  patch_embed.proj.: feature_extractor.body.patch_embedding.patch_embeddings.
+  patch_embed.proj.: patch_embedding.patch_embeddings.
   .fc: .linear
   encoder.: feature_extractor.body.
