@@ -383,14 +383,16 @@ class SelectTo2D(MapTransform):
                         select_boxs.append(i)
                 d[self.box_keys] = torch.index_select(d[self.box_keys], 0, torch.LongTensor(select_boxs))#select box
                 d[self.label_key] = torch.index_select(d[self.label_key], 0, torch.LongTensor(select_boxs))#select label
+            print(box_arr)
+            print('z_center: ',z_center)
         elif box_arr.shape[0]==1:
             z_min = box_arr[0,2]
             z_max = box_arr[0,5]
             z_center = int((z_min + z_max) / 2)
+            print(box_arr)
+            print('z_center: ',z_center)
         else:
             z_center = 0
-        print(box_arr)
-        print('z_center: ',z_center)
         ### select med image in z domain and change shape
         image_key = self.image_keys[0]
         tmp = d[image_key]
