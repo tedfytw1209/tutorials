@@ -325,6 +325,7 @@ class TransformerBlock(nn.Module):
         use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
         input_size: Sequence[int] | int | None = None,
+        init_values: float|Tensor|None =None,
     ) -> None:
         """
         Args:
@@ -341,6 +342,7 @@ class TransformerBlock(nn.Module):
             rel_pos_zero_init (bool, optional): If True, zero initialize relative positional parameters.
             input_size (int or None): Input resolution for calculating the relative positional
                 parameter size and reshape.
+            init_values=None, init value for LayerScale
         """
 
         super().__init__()
@@ -358,6 +360,8 @@ class TransformerBlock(nn.Module):
                             use_rel_pos=use_rel_pos, rel_pos_zero_init=rel_pos_zero_init,
                             input_size=input_size if window_size == 0 else (window_size, window_size))
         self.norm2 = nn.LayerNorm(hidden_size)
+        self.ls1 = LayerScale(hidden_size, init_values=init_values) if init_values else nn.Identity()
+        self.ls2 = LayerScale(hidden_size, init_values=init_values) if init_values else nn.Identity()
         self.window_size = window_size
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -386,8 +390,8 @@ class TransformerBlock(nn.Module):
             x = x.view(-1, self.input_size[0]* self.input_size[1], self.hidden_size)
         else:
             x = self.attn(x) # same shape
-        x = short_cut + self.drop_path(x)
-        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        x = short_cut + self.drop_path(self.ls1(x))
+        x = x + self.drop_path(self.ls2(self.mlp(self.norm2(x))))
         return x
 
 class ViTDet(nn.Module):
@@ -416,6 +420,7 @@ class ViTDet(nn.Module):
         rel_pos_zero_init: bool = True,
         pretrain_img_size: int = 224,
         out_feature: str ="last_feat",
+        init_values: float|Tensor|None =None,
         ):
         """
         Args:
@@ -443,6 +448,7 @@ class ViTDet(nn.Module):
             use_rel_pos (bool): If True, add relative positional embeddings to the attention map.
             pretrain_img_size (int): input image size for pretraining models.
             out_feature (str): name of the feature from the last block.
+            init_values=None, init value for LayerScale
         """
 
         super().__init__()
@@ -492,6 +498,7 @@ class ViTDet(nn.Module):
             dropout_rate=dropout_rate,
             spatial_dims=spatial_dims,
         )
+        #blocks
         self.blocks = nn.ModuleList(
             [
                 TransformerBlock(hidden_size, mlp_dim, num_heads, dropout_rate, qkv_bias, save_attn,
@@ -500,6 +507,7 @@ class ViTDet(nn.Module):
                                 use_rel_pos=use_rel_pos,
                                 rel_pos_zero_init=rel_pos_zero_init,
                                 input_size=patched_input_shape,
+                                init_values=init_values,
                                 )
                 for i in range(num_layers)
             ]

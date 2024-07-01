@@ -112,6 +112,7 @@ class OBJDetectInference():
         self.use_train = debug_dict.get('use_train',True)
         self.use_test = debug_dict.get('use_test',True)
         self.model_name = config_dict.get('model',"retinanet")
+        self.init_values = config_dict.get('init_values',None)
         
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
@@ -641,6 +642,7 @@ class OBJDetectInference():
                 pretrain_img_size=224, #not used now
                 #pretrain_use_cls_token=True, ?
                 out_feature="feat", #name of the last feature, no need
+                init_values=self.init_values,
                 )
         
         fpn_net = SimpleFeaturePyramid(
