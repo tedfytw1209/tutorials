@@ -23,6 +23,12 @@ if __name__ == "__main__":
         help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
+        "-p",
+        "--pretrain-config",
+        default="./pretrain_config/config_monai.yaml",
+        help="config yaml file that stores hyper-parameters",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         default=False,
