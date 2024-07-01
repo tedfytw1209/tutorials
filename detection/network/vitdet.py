@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from collections import OrderedDict
+from typing import Union
 
 import math
 import torch
@@ -167,6 +168,21 @@ def add_decomposed_rel_pos(attn: Tensor, q: Tensor, rel_pos_h: Tensor, rel_pos_w
     ).view(B, q_h * q_w, k_h * k_w)
 
     return attn
+
+# Modified from: https://github.com/huggingface/pytorch-image-models/blob/main/timm/models/vision_transformer.py#L103-L110
+class LayerScale(nn.Module):
+    def __init__(
+        self,
+        dim: int,
+        init_values: Union[float, Tensor] = 1e-5,
+        inplace: bool = False,
+    ) -> None:
+        super().__init__()
+        self.inplace = inplace
+        self.gamma = nn.Parameter(init_values * torch.ones(dim))
+
+    def forward(self, x: Tensor) -> Tensor:
+        return x.mul_(self.gamma) if self.inplace else x * self.gamma
 
 class LayerNorm(nn.Module):
     """
