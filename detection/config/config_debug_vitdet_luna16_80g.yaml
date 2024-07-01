@@ -43,6 +43,7 @@ out_channels: 256
 model_patch_size: 16
 window_size: 6
 mlp_dim: 3072
+qkv_bias: True
 scale_factors:
 - 2
 - 1

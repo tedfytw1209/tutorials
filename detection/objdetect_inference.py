@@ -631,7 +631,7 @@ class OBJDetectInference():
                 num_layers=self.args.depth,
                 num_heads=self.args.num_heads,
                 spatial_dims=model_spatial_dims,
-                qkv_bias=True,
+                qkv_bias=self.args.qkv_bias, #add to option
                 drop_path_rate=self.args.dp, #self impl, it is not equal to dropout
                 window_size=self.args.window_size, #self impl
                 #act_layer=nn.GELU

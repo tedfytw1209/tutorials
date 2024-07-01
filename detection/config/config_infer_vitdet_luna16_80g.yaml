@@ -12,6 +12,7 @@ model_patch_size: 16
 window_size: 6
 mlp_dim: 3072
 n_input_channels: 1
+qkv_bias: True
 scale_factors:
 - 4
 - 2

@@ -169,6 +169,20 @@ def add_decomposed_rel_pos(attn: Tensor, q: Tensor, rel_pos_h: Tensor, rel_pos_w
 
     return attn
 
+#From https://github.com/OpenGVLab/InternVL/blob/main/classification/models/intern_vit_6b.py#L127
+class RMSNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.variance_epsilon = eps
+
+    def forward(self, hidden_states):
+        input_dtype = hidden_states.dtype
+        hidden_states = hidden_states.to(torch.float32)
+        variance = hidden_states.pow(2).mean(-1, keepdim=True)
+        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+        return self.weight * hidden_states.to(input_dtype)
+
 # Modified from: https://github.com/huggingface/pytorch-image-models/blob/main/timm/models/vision_transformer.py#L103-L110
 class LayerScale(nn.Module):
     def __init__(
@@ -228,6 +242,8 @@ class SABlock(nn.Module):
         use_rel_pos: bool =False,
         rel_pos_zero_init: bool =True,
         input_size: Sequence[int] | int | None = None,
+        norm_layer: nn.Module = nn.LayerNorm,
+        qk_normalization: bool = False,
     ) -> None:
         """
         Args:
@@ -264,6 +280,8 @@ class SABlock(nn.Module):
         self.scale = self.dim_head**-0.5
         self.save_attn = save_attn
         self.att_mat = torch.Tensor()
+        self.q_norm = norm_layer(hidden_size) if qk_normalization else nn.Identity()
+        self.k_norm = norm_layer(hidden_size) if qk_normalization else nn.Identity()
         
         '''self.use_rel_pos = use_rel_pos
         if self.use_rel_pos:
@@ -288,6 +306,9 @@ class SABlock(nn.Module):
         B, H, W, _ = x.shape
         output = self.input_rearrange(self.qkv(x))
         q, k, v = output[0], output[1], output[2]
+        if self.qk_normalization: ##!! maybe not right
+            q = self.q_norm(q)
+            k = self.k_norm(k)
         att_mat = (torch.einsum("blxd,blyd->blxy", q, k) * self.scale)
         '''if self.use_rel_pos:
             att_mat = add_decomposed_rel_pos(att_mat, q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W))'''
