@@ -304,12 +304,13 @@ class SABlock(nn.Module):
         Returns:
             tensor: Output features with same shape
         """
-        B, H, W, _ = x.shape
-        output = self.input_rearrange(self.qkv(x))
-        q, k, v = output[0], output[1], output[2]
-        if self.qk_normalization: ##!! maybe not right
-            q = self.q_norm(q)
-            k = self.k_norm(k)
+        print(x.shape) ###debug
+        output = self.input_rearrange(self.qkv(x)) #(qkv, B, num_heads, N, C)
+        q, k, v = output[0], output[1], output[2] #(B, num_heads, N, C)
+        if self.qk_normalization: ##!! maybe not right: need from (B, num_heads, N, C)->(B, N, num_heads*C)->(B, num_heads, N, C)
+            B_, H_, N_, D_ = q.shape
+            q = self.q_norm(q.transpose(1, 2).flatten(-2, -1)).view(B_, N_, H_, D_).transpose(1, 2)
+            k = self.k_norm(k.transpose(1, 2).flatten(-2, -1)).view(B_, N_, H_, D_).transpose(1, 2)
         att_mat = (torch.einsum("blxd,blyd->blxy", q, k) * self.scale)
         '''if self.use_rel_pos:
             att_mat = add_decomposed_rel_pos(att_mat, q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W))'''
