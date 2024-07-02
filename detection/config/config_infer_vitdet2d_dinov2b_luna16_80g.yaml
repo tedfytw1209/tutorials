@@ -5,7 +5,7 @@ model_spatial_dims: 2
 embed_dim: 768
 depth: 12
 num_heads: 12
-dp: 0
+dp: 0.1
 img_size: 192
 out_channels: 256
 model_patch_size: 16
@@ -62,7 +62,7 @@ base_anchor_shapes:
 balanced_sampler_pos_fraction: 0.3
 
 #training setting
-lr: 0.01
+lr: 0.001
 scheduler_step : 30
 scheduler_gamma : 0.5
 warmup_epochs : 10
