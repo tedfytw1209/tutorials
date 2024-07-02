@@ -33,7 +33,7 @@ import monai
 from monai.data import DataLoader, Dataset
 from monai.utils import set_determinism
 #from monai.networks.nets import ViT
-from network.ViT_new import ViT_new
+from network.ViT_new import ViT_new, RMSNorm
 from monai.losses import PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
@@ -89,7 +89,14 @@ class SuperResolutionInference():
         self.amp = amp
         self.use_train = debug_dict.get('use_train',True)
         self.use_test = debug_dict.get('use_test',True)
-        self.model_name = config_dict.get('model',"retinanet")
+        self.model_name = config_dict.get('model',"vit")
+        self.init_values = config_dict.get('init_values',None)
+        if config_dict.get('attn_norm_layer','layernorm')=='RMS':
+            self.attn_norm_layer = RMSNorm
+        else:
+            self.attn_norm_layer = nn.LayerNorm
+        self.attn_qk_normalization = config_dict.get('attn_qk_normalization',False)
+        
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
         low_res_size = int(self.args.img_size // self.args.scale_factor)
@@ -499,8 +506,12 @@ class SuperResolutionInference():
                 mlp_dim=self.args.mlp_dim,
                 num_layers=self.args.depth,
                 num_heads=self.args.num_heads,
+                drop_path_rate=self.args.dp,
                 spatial_dims=model_spatial_dims,
-                qkv_bias=True,
+                qkv_bias=self.args.qkv_bias,
+                init_values=self.init_values,
+                attn_norm_layer=self.attn_norm_layer,
+                attn_qk_normalization=self.attn_qk_normalization,
                 )
         
         if self.args.decoder_type=='conv':
@@ -606,6 +617,7 @@ if __name__ == "__main__":
     trans_dic = pretrain_dict['trans_dic']
     state_key = pretrain_dict['state_key']
     pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
+    config_dict.update(pretrain_dict)
     test_mode = args.testmode
     debug_dict = {} #full test
     if args.testmode=='train': #train func test

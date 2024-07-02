@@ -5,3 +5,4 @@ trans_dic:
   .fc: .linear
   blocks.: encoder.blocks.
   norm.: encoder.norm.
+init_values: 1.0
