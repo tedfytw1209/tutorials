@@ -376,13 +376,13 @@ class SelectTo2D(MapTransform):
             if z_all_max > z_all_min:
                 z_center = int((z_all_max + z_all_min) / 2)
             else:
+                z_center = int((box_arr[0,2] + box_arr[0,5]) / 2)
                 select_boxs = []
                 for i in range(box_arr.shape[0]):
                     if box_arr[i,2] <= z_center and box_arr[i,5] >= z_center:
                         select_boxs.append(i)
                 d[self.box_keys] = torch.index_select(d[self.box_keys], 0, torch.LongTensor(select_boxs))#select box
                 d[self.label_key] = torch.index_select(d[self.label_key], 0, torch.LongTensor(select_boxs))#select label
-                z_center = int((box_arr[0,2] + box_arr[0,5]) / 2)
         elif box_arr.shape[0]==1:
             z_min = box_arr[0,2]
             z_max = box_arr[0,5]
