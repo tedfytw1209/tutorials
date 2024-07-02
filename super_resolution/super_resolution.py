@@ -32,7 +32,8 @@ import monai
 
 from monai.data import DataLoader, Dataset
 from monai.utils import set_determinism
-from monai.networks.nets import ViT
+#from monai.networks.nets import ViT
+from network.ViT_new import ViT_new
 from monai.losses import PerceptualLoss
 
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
@@ -490,7 +491,7 @@ class SuperResolutionInference():
         total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
         low_resol_img_size = int(self.args.img_size // self.args.scale_factor)
         # Parameter settings are in config.json file
-        encoder = ViT(
+        encoder = ViT_new(
                 in_channels=self.args.n_input_channels, #input channel
                 img_size=low_resol_img_size,
                 patch_size=self.args.model_patch_size,
@@ -565,6 +566,12 @@ if __name__ == "__main__":
         help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
+        "-p",
+        "--pretrain-config",
+        default="./pretrain_config/config_monai.yaml",
+        help="config yaml file that stores hyper-parameters",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         default=False,
@@ -593,11 +600,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
-    transform_dic = {
-        '.patch_embed.proj': '.patch_embedding.patch_embeddings', 
-        '.fc': '.linear',
-    }
-    pretrained_model = load_model(args.model,transform_dic)
+    pretrain_dict = yaml.safe_load(open(args.pretrain_config, "r"))
+    trans_dic = {}
+    state_key = 'state_dict'
+    trans_dic = pretrain_dict['trans_dic']
+    state_key = pretrain_dict['state_key']
+    pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
     test_mode = args.testmode
     debug_dict = {} #full test
     if args.testmode=='train': #train func test

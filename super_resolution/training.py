@@ -19,6 +19,12 @@ if __name__ == "__main__":
         help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
+        "-p",
+        "--pretrain-config",
+        default="./pretrain_config/config_monai.yaml",
+        help="config yaml file that stores hyper-parameters",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         default=False,
@@ -41,11 +47,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
-    transform_dic = {
-        '.patch_embed.proj': '.patch_embedding.patch_embeddings', 
-        '.fc': '.linear',
-    }
-    pretrained_model = load_model(args.model,transform_dic)
+    pretrain_dict = yaml.safe_load(open(args.pretrain_config, "r"))
+    trans_dic = {}
+    state_key = 'state_dict'
+    trans_dic = pretrain_dict['trans_dic']
+    state_key = pretrain_dict['state_key']
+    pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
     debug_dict = {} #full test
     debug_dict['use_test'] = False
     if args.deter:
