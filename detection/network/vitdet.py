@@ -282,6 +282,7 @@ class SABlock(nn.Module):
         self.att_mat = torch.Tensor()
         self.q_norm = norm_layer(hidden_size) if qk_normalization else nn.Identity()
         self.k_norm = norm_layer(hidden_size) if qk_normalization else nn.Identity()
+        self.qk_normalization = qk_normalization
         
         '''self.use_rel_pos = use_rel_pos
         if self.use_rel_pos:
