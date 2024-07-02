@@ -304,8 +304,7 @@ class SABlock(nn.Module):
         Returns:
             tensor: Output features with same shape
         """
-        print(x.shape) ###debug
-        output = self.input_rearrange(self.qkv(x)) #(qkv, B, num_heads, N, C)
+        output = self.input_rearrange(self.qkv(x)) #(B, N, 3*num_heads*C)->(qkv, B, num_heads, N, C)
         q, k, v = output[0], output[1], output[2] #(B, num_heads, N, C)
         if self.qk_normalization: ##!! maybe not right: need from (B, num_heads, N, C)->(B, N, num_heads*C)->(B, num_heads, N, C)
             B_, H_, N_, D_ = q.shape
