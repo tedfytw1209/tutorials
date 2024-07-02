@@ -1,7 +1,6 @@
-#pre-trained model
+#pre-trained model intern
 state_key: ''
 trans_dic:
   #patch_embed.proj.: feature_extractor.body.patch_embedding.patch_embeddings.
   .fc: .linear
   blocks.: feature_extractor.body.blocks.
-  norm.: feature_extractor.body.norm.

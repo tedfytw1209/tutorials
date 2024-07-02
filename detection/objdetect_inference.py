@@ -47,7 +47,7 @@ from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
-from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet
+from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RMSNorm
 from network.vitdet import vitdet_fpn_feature_extractor
 from network.warmup_scheduler import GradualWarmupScheduler
 from utils.utils import load_model
@@ -113,7 +113,11 @@ class OBJDetectInference():
         self.use_test = debug_dict.get('use_test',True)
         self.model_name = config_dict.get('model',"retinanet")
         self.init_values = config_dict.get('init_values',None)
-        
+        if config_dict.get('attn_norm_layer','layernorm')=='RMS':
+            self.attn_norm_layer = RMSNorm
+        else:
+            self.attn_norm_layer = nn.LayerNorm
+        self.attn_qk_normalization = config_dict.get('attn_qk_normalization',False)
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
         intensity_transform = ScaleIntensityRanged(
@@ -643,6 +647,8 @@ class OBJDetectInference():
                 #pretrain_use_cls_token=True, ?
                 out_feature="feat", #name of the last feature, no need
                 init_values=self.init_values,
+                attn_norm_layer=self.attn_norm_layer,
+                attn_qk_normalization=self.attn_qk_normalization,
                 )
         
         fpn_net = SimpleFeaturePyramid(

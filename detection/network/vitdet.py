@@ -347,6 +347,8 @@ class TransformerBlock(nn.Module):
         rel_pos_zero_init: bool = True,
         input_size: Sequence[int] | int | None = None,
         init_values: float|Tensor|None =None,
+        attn_norm_layer: nn.Module = nn.LayerNorm,
+        attn_qk_normalization: bool = False,
     ) -> None:
         """
         Args:
@@ -364,6 +366,8 @@ class TransformerBlock(nn.Module):
             input_size (int or None): Input resolution for calculating the relative positional
                 parameter size and reshape.
             init_values=None, init value for LayerScale
+            attn_norm_layer: nn.Module = nn.LayerNorm, norm for attn
+            attn_qk_normalization: bool = False,, norm for attn q,k
         """
 
         super().__init__()
@@ -379,7 +383,9 @@ class TransformerBlock(nn.Module):
         self.norm1 = nn.LayerNorm(hidden_size)
         self.attn = SABlock(hidden_size, num_heads, dropout_rate, qkv_bias, save_attn,
                             use_rel_pos=use_rel_pos, rel_pos_zero_init=rel_pos_zero_init,
-                            input_size=input_size if window_size == 0 else (window_size, window_size))
+                            input_size=input_size if window_size == 0 else (window_size, window_size),
+                            norm_layer=attn_norm_layer,
+                            qk_normalization=attn_qk_normalization)
         self.norm2 = nn.LayerNorm(hidden_size)
         self.ls1 = LayerScale(hidden_size, init_values=init_values) if init_values else nn.Identity()
         self.ls2 = LayerScale(hidden_size, init_values=init_values) if init_values else nn.Identity()
@@ -442,6 +448,8 @@ class ViTDet(nn.Module):
         pretrain_img_size: int = 224,
         out_feature: str ="last_feat",
         init_values: float|Tensor|None =None,
+        attn_norm_layer: nn.Module = nn.LayerNorm,
+        attn_qk_normalization: bool = False,
         ):
         """
         Args:
@@ -470,6 +478,8 @@ class ViTDet(nn.Module):
             pretrain_img_size (int): input image size for pretraining models.
             out_feature (str): name of the feature from the last block.
             init_values=None, init value for LayerScale
+            attn_norm_layer: nn.Module = nn.LayerNorm,
+            attn_qk_normalization: bool = False,
         """
 
         super().__init__()
@@ -529,6 +539,8 @@ class ViTDet(nn.Module):
                                 rel_pos_zero_init=rel_pos_zero_init,
                                 input_size=patched_input_shape,
                                 init_values=init_values,
+                                attn_norm_layer=attn_norm_layer,
+                                attn_qk_normalization=attn_qk_normalization,
                                 )
                 for i in range(num_layers)
             ]
