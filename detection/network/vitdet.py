@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from collections import OrderedDict
 from typing import Union
 
@@ -26,12 +26,7 @@ from timm.models.layers import DropPath
 from monai.networks.blocks.patchembedding import PatchEmbeddingBlock
 from monai.networks.blocks.mlp import MLPBlock
 from monai.utils import optional_import
-from monai.networks.blocks.backbone_fpn_utils import BackboneWithFPN
-from monai.networks.nets import ViT
-from monai.networks.layers.factories import Conv, Pool
-from monai.apps.detection.networks.retinanet_detector import *
-from monai.apps.detection.utils.anchor_utils import AnchorGenerator
-from monai.data.box_utils import box_iou
+from monai.networks.layers.factories import Pool
 
 from dataclasses import dataclass
 from typing import Optional

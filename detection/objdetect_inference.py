@@ -17,18 +17,15 @@ import argparse
 import gc
 import json
 import yaml
-import logging
 import sys
 import time
 from typing import Any
-from collections import OrderedDict
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import cv2
 import numpy as np
 import torch
-from torch import Tensor, nn
+from torch import nn
 from torch.nn.utils.clip_grad import clip_grad_norm_
 
 from torch.utils.tensorboard import SummaryWriter
@@ -49,7 +46,7 @@ from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
-from network.vitdet import SimpleFeaturePyramid, LastLevelMaxPool, ViTDet, RMSNorm
+from network.vitdet import SimpleFeaturePyramid, ViTDet, RMSNorm
 from network.vitdet import vitdet_fpn_feature_extractor
 from network.warmup_scheduler import GradualWarmupScheduler
 from utils.utils import load_model
