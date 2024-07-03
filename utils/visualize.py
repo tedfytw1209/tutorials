@@ -49,6 +49,36 @@ def normalize_image_to_uint8(image):
     draw_img = (255 * draw_img).astype(np.uint8)
     return draw_img
 
+def visualize_image(image):
+    """
+    Visualize an image for debug
+
+    Args:
+        image: image numpy array, sized (C, H, W)
+    """
+    # draw image
+    draw_img = normalize_image_to_uint8(image)
+    draw_img = cv2.cvtColor(draw_img, cv2.COLOR_GRAY2BGR)
+    fig, ax = plt.subplots(nrows=1, ncols=2)
+    ax[0].imshow(image["image"][0, :, :], cmap="gray")
+    ax[0].axis("off")
+    ax[1].imshow(image["low_res_image"][0, :, :], cmap="gray")
+    ax[1].axis("off")
+    
+    return draw_img
+
+def visualize_image_tf(image):
+    """
+    Visualize an image for debug
+
+    Args:
+        image: image numpy array, sized (C, H, W)
+    """
+    # draw image
+    draw_img = normalize_image_to_uint8(image)
+    draw_img = cv2.cvtColor(draw_img, cv2.COLOR_GRAY2BGR)
+    
+    return draw_img
 
 def visualize_one_xy_slice_in_3d_image(gt_boxes, image, pred_boxes, gt_box_index=0):
     """

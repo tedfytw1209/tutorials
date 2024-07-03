@@ -33,7 +33,7 @@ def mAP_with_IoU(
         iou_range (Sequence[float]): (start, stop, step) for mAP iou thresholds
         max_detection (Sequence[int]): maximum number of detections per image
     Return:
-        mAP  and per class mAP result with IoU ranges (Dict[str, float])
+        mAP and per class mAP result with IoU ranges (Dict[str, float])
     '''
     coco_metric = COCOMetric(classes=classes, iou_range=iou_range, iou_list=[0.1], max_detection=max_detection) #iou_list not need for mAP
     results_metric = matching_batch(
@@ -79,7 +79,7 @@ def AP_at_IoU(
         iou_list (Sequence[float]): specific thresholds where ap is evaluated and saved
         max_detection (Sequence[int]): maximum number of detections per image
     Return:
-        mAP  and per class mAP result with IoU ranges (Dict[str, float])
+        mAP and per class mAP result with IoU ranges (Dict[str, float])
     '''
     if isinstance(iou_list,float):
         iou_list = [iou_list]
@@ -129,7 +129,7 @@ def mAR_with_IoU(
         iou_range (Sequence[float]): (start, stop, step) for mAP iou thresholds
         max_detection (Sequence[int]): maximum number of detections per image
     Return:
-        mAP  and per class mAP result with IoU ranges (Dict[str, float])
+        mAP and per class mAP result with IoU ranges (Dict[str, float])
     '''
     coco_metric = COCOMetric(classes=classes, iou_range=iou_range, iou_list=[0.1], max_detection=max_detection) #iou_list not need for mAP
     results_metric = matching_batch(
