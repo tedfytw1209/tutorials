@@ -5,3 +5,4 @@ trans_dic:
   .fc: .linear
   blocks.: feature_extractor.body.blocks.
   norm.: feature_extractor.body.norm.
+init_values: 1.0

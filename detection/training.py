@@ -58,6 +58,7 @@ if __name__ == "__main__":
         trans_dic = pretrain_dict['trans_dic']
         state_key = pretrain_dict['state_key']
     pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
+    config_dict.update(pretrain_dict)
     debug_dict = {} #full test
     debug_dict['use_test'] = False
     if args.deter:

@@ -22,6 +22,12 @@ if __name__ == "__main__":
         help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
+        "-p",
+        "--pretrain-config",
+        default="./pretrain_config/config_monai.yaml",
+        help="config yaml file that stores hyper-parameters",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         default=False,
@@ -44,6 +50,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
+    pretrain_dict = yaml.safe_load(open(args.pretrain_config, "r"))
+    config_dict.update(pretrain_dict)
     pretrained_model = None
     debug_dict = {} #full test
     debug_dict['use_train'] = False

@@ -4,3 +4,11 @@ trans_dic:
   #patch_embed.proj.: feature_extractor.body.patch_embedding.patch_embeddings.
   .fc: .linear
   blocks.: encoder.blocks.
+init_values: 1.0
+embed_dim: 3200
+depth: 48
+num_heads: 25
+mlp_dim: 12800
+qkv_bias: False
+attn_norm_layer: RMS
+attn_qk_normalization: True
