@@ -1,7 +1,7 @@
 import argparse
 import yaml
-from objdetect_inference import OBJDetectInference
-from utils.utils import load_model
+from .objdetect_inference import OBJDetectInference
+from .utils.utils import load_model
 
 if __name__ == "__main__":
     '''

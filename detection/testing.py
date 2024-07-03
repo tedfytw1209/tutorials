@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from objdetect_inference import OBJDetectInference
+from .objdetect_inference import OBJDetectInference
 
 if __name__ == "__main__":
     '''
