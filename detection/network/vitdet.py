@@ -549,14 +549,14 @@ class ViTDet(nn.Module):
             else:
                 self.classification_head = nn.Linear(hidden_size, num_classes)  # type: ignore
 
-    def forward(self, x: Tensor) -> dict[str, Tensor]:
+    def forward(self, x: Tensor) -> tuple[Tensor, Sequence[Tensor]]:
         """forward
 
         Args:
             x (tensor): Input image with shape (B, C, H, W, D) or (B, C, H, W)
 
         Returns:
-            Output last features: Dict with {self._out_features[0]: classification logits (B, num_classes) if self.classification==True
+            Output last features (Tensor): classification logits (B, num_classes) if self.classification==True
             or feature maps (B, C, H/patch, W/patch, D) or (B, C, H/patch, W/patch)}
         """
         #PatchEmbeddingBlock Input: (B, C, H, W, D), Output: (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)
@@ -564,16 +564,16 @@ class ViTDet(nn.Module):
         if hasattr(self, "cls_token"):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
             x = torch.cat((cls_token, x), dim=1)
-        #hidden_states_out = []
+        hidden_states_out = []
         for blk in self.blocks:
             x = blk(x)
-            #hidden_states_out.append(x)
+            hidden_states_out.append(x)
         x = self.norm(x)
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
         # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
         x = x.transpose(-1,-2).reshape(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
-        return {self._out_features[0]:x}
+        return x, hidden_states_out
     
     def output_shape(self):
         """
@@ -834,8 +834,9 @@ class BackboneWithFPN_vitdet(nn.Module):
         #print('BackboneWithFPN_vitdet Input Features Shape: ', x.shape)
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
-        features: dict[str, Tensor] = self.body(x)  # backbone
-        y: dict[str, Tensor] = self.fpn(features)  # FPN
+        features, hiddens = self.body(x)  # backbone
+        features_dict = {self.body._out_features[0]:features}
+        y: dict[str, Tensor] = self.fpn(features_dict)  # FPN
         if self.dim_change_flag: #change back for detector used
             out_dict: dict[str, Tensor] = {f: torch.unsqueeze(res,dim=-1) for f, res in y.items()}
         else:
