@@ -549,7 +549,7 @@ class ViTDet(nn.Module):
             else:
                 self.classification_head = nn.Linear(hidden_size, num_classes)  # type: ignore
 
-    def forward(self, x: Tensor) -> tuple[Tensor, Sequence[Tensor]]:
+    def forward(self, x: Tensor):
         """forward
 
         Args:
