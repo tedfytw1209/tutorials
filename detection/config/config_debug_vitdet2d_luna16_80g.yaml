@@ -69,5 +69,5 @@ warmup_multi : 1
 w_cls: 1
 finetune_epochs: 60
 val_interval: 5
-batch_size: 256
+batch_size: 128
 amp: False
