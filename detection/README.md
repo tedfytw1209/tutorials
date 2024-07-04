@@ -13,6 +13,7 @@ Taking fold 0 as an example, run:
 python training.py \ 
     -e ./config/environment_vit_luna16_fold0.yaml \ 
     -c ./config/config_infer_vitdet2dimg_luna16_80g.json \ 
+    -p ./pretrain_config/config_monai.yaml \ 
     -m /blue/bianjiang/tienyuchang/basemodel/checkpoint_test.pth \ 
     -d
 ```
@@ -23,6 +24,7 @@ sbatch run_train.sh
 
 This python script uses batch size and patch size defined in [./config/config_infer_vitdet2dimg_luna16_80g.yaml](./config/config_infer_vitdet2dimg_luna16_80g.yaml).
 The environment config include train/test model_path, data_base_dir, data_list_file_path, tfevent_path, and result_list_file_path defined in [./config/environment_vit_luna16_fold0.yaml](./config/environment_vit_luna16_fold0.yaml).
+The pre-trained model special setting in [./pretrain_config/config_monai.yaml](./pretrain_config/config_monai.yaml)
 
 If you are tuning hyper-parameters, please also add `--verbose` flag.
 Details about matched anchors during training will be printed out.
