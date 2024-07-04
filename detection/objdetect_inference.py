@@ -342,7 +342,7 @@ class OBJDetectInference():
             # Training
             for batch_data in self.train_loader:
                 step += 1
-                #flatten targets per image and images per batch
+                #flatten targets per image and images per batch (1, batch size, C, H, W, (D))
                 inputs = [
                     batch_data_ii["image"].to(device) for batch_data_i in batch_data for batch_data_ii in batch_data_i
                 ]

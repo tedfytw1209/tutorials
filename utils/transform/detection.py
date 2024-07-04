@@ -358,19 +358,20 @@ class SelectTo2D(MapTransform):
         allow_missing_keys: don't raise exception if key is missing.
     """
 
-    def __init__(self, image_keys: KeysCollection,box_keys: str,label_key: str,image_meta_key_postfix: str="meta_dict", allow_missing_keys: bool = False):
+    def __init__(self, image_keys: KeysCollection,box_keys: str,label_key: str,image_meta_key_postfix: str="meta_dict", allow_missing_keys: bool = False, training = True):
         self.image_keys = image_keys
         MapTransform.__init__(self, image_keys, allow_missing_keys)
         self.box_keys = box_keys
         self.label_key = label_key
         box_ref_image_keys = image_keys[0]
         self.image_meta_key = f"{box_ref_image_keys}_{image_meta_key_postfix}"
+        self.training = training
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
         #box z, !! only select first box's mean
         box_arr = d[self.box_keys].cpu().detach().numpy()
-        if box_arr.shape[0]>1:
+        if box_arr.shape[0]>1: #multi boxs
             z_all_min = np.max(box_arr[:,2])
             z_all_max = np.min(box_arr[:,5])
             if z_all_max > z_all_min:
@@ -383,11 +384,11 @@ class SelectTo2D(MapTransform):
                         select_boxs.append(i)
                 d[self.box_keys] = torch.index_select(d[self.box_keys], 0, torch.LongTensor(select_boxs))#select box
                 d[self.label_key] = torch.index_select(d[self.label_key], 0, torch.LongTensor(select_boxs))#select label
-        elif box_arr.shape[0]==1:
+        elif box_arr.shape[0]==1: #one box
             z_min = box_arr[0,2]
             z_max = box_arr[0,5]
             z_center = int((z_min + z_max) / 2)
-        else:
+        else: #no box
             z_center = 0
         ### select med image in z domain and change shape
         image_key = self.image_keys[0]
@@ -547,7 +548,7 @@ def generate_detection_train_transform_2d(
             RandScaleIntensityd(keys=[image_key], prob=0.15, factors=0.25),
             RandShiftIntensityd(keys=[image_key], prob=0.15, offsets=0.1),
             RandAdjustContrastd(keys=[image_key], prob=0.3, gamma=(0.7, 1.5)),
-            SelectTo2D(image_keys=[image_key], box_keys=box_key,label_key=label_key),
+            SelectTo2D(image_keys=[image_key], box_keys=box_key,label_key=label_key, training= True),
             EmptyBoxdTo2d(box_keys=[box_key], spatial_dims=2),
             EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
             EnsureTyped(keys=[label_key], dtype=torch.long),
@@ -588,7 +589,7 @@ def generate_detection_val_transform_2d(
                 image_meta_key_postfix="meta_dict",
                 affine_lps_to_ras=affine_lps_to_ras,
             ),
-            SelectTo2D(image_keys=[image_key], box_keys=box_key, label_key=label_key),
+            SelectTo2D(image_keys=[image_key], box_keys=box_key, label_key=label_key, training=False),
             EmptyBoxdTo2d(box_keys=[box_key], spatial_dims=2),
             EnsureTyped(keys=[image_key, box_key], dtype=compute_dtype),
             EnsureTyped(keys=label_key, dtype=torch.long),
