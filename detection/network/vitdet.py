@@ -557,9 +557,9 @@ class ViTDet(nn.Module):
 
         Returns:
             Output last features (Tensor): classification logits (B, num_classes) if self.classification==True
-            or feature maps (B, C, H/patch, W/patch, D) or (B, C, H/patch, W/patch)}
+            or feature maps (B, H /patch_szie* W/patch_szie, hidden_size)
         """
-        #PatchEmbeddingBlock Input: (B, C, H, W, D), Output: (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)
+        #PatchEmbeddingBlock Input: (B, C, H, W), Output: (B, H /patch_szie* W/patch_szie, hidden_size)
         x = self.patch_embedding(x)
         if hasattr(self, "cls_token"):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
@@ -571,8 +571,7 @@ class ViTDet(nn.Module):
         x = self.norm(x)
         if hasattr(self, "classification_head"):
             x = self.classification_head(x[:, 0])
-        # (B, H /patch_szie* W/patch_szie* D/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
-        x = x.transpose(-1,-2).reshape(-1, self.patched_input_shape[0], self.patched_input_shape[1], self.hidden_size)
+        # (B, H /patch_szie* W/patch_szie, hidden_size)
         return x, hidden_states_out
     
     def output_shape(self):
@@ -835,6 +834,8 @@ class BackboneWithFPN_vitdet(nn.Module):
         if self.dim_change_flag and x.shape[-1]==1:
             x = torch.squeeze(x, dim=-1)
         features, hiddens = self.body(x)  # backbone
+        # (B, H /patch_szie* W/patch_szie, hidden_size)->(B, H/patch * W/patch, C) ->(B, H/patch, W/patch, C)
+        features = features.transpose(-1,-2).reshape(-1, self.body.patched_input_shape[0], self.body.patched_input_shape[1], self.body.hidden_size)
         features_dict = {self.body._out_features[0]:features}
         y: dict[str, Tensor] = self.fpn(features_dict)  # FPN
         if self.dim_change_flag: #change back for detector used
