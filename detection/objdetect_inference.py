@@ -46,9 +46,9 @@ from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
-from network.vitdet import SimpleFeaturePyramid, ViTDet, RMSNorm
-from network.vitdet import vitdet_fpn_feature_extractor
-from network.warmup_scheduler import GradualWarmupScheduler
+from models.vitdet import SimpleFeaturePyramid, ViTDet, RMSNorm
+from models.vitdet import vitdet_fpn_feature_extractor
+from models.schedular.warmup_scheduler import GradualWarmupScheduler
 from utils.utils import load_model
 from utils.visualize import visualize_one_xy_slice_in_3d_image,visualize_one_xy_slice_in_2d_image,print_network_params
 from utils.evaluation.detection_metric import mAP_with_IoU,mAR_with_IoU,AP_at_IoU

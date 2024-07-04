@@ -27,18 +27,18 @@ from torch import nn
 from torch.nn.utils.clip_grad import clip_grad_norm_
 
 from torch.utils.tensorboard import SummaryWriter
-from network.warmup_scheduler import GradualWarmupScheduler
+from models.schedular.warmup_scheduler import GradualWarmupScheduler
 import monai
 
 from monai.data import DataLoader, Dataset
 from monai.utils import set_determinism
-#from monai.networks.nets import ViT
-from network.ViT_new import ViT_new, RMSNorm
 from monai.losses import PerceptualLoss
+#from monai.networks.nets import ViT
+from models.vitdet import ViTDet, RMSNorm
 
 from dataset.load_dataset import load_mednist_datalist,load_eyeq_datalist
 from utils.transform.superresolution import generate_train_transforms, generate_validation_transforms
-from network.autoencoder import Lazy_Autoencoder, Conv_decoder, Upsample_decoder
+from models.autoencoder import Lazy_Autoencoder, Conv_decoder, Upsample_decoder
 from utils.visualize import visualize_image_tf, print_network_params
 from utils.utils import load_model
 from utils.evaluation.superresolution_metric import PSNR, SSIM
@@ -498,7 +498,7 @@ class SuperResolutionInference():
         total_scale_factor = int(self.args.scale_factor * self.args.model_patch_size)
         low_resol_img_size = int(self.args.img_size // self.args.scale_factor)
         # Parameter settings are in config.json file
-        encoder = ViT_new(
+        encoder = ViTDet(
                 in_channels=self.args.n_input_channels, #input channel
                 img_size=low_resol_img_size,
                 patch_size=self.args.model_patch_size,
