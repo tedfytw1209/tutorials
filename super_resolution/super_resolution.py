@@ -18,6 +18,8 @@ import gc
 import json
 import yaml
 import time
+import os
+from datetime import datetime
 import sys
 from typing import Any
 from pathlib import Path
@@ -247,10 +249,12 @@ class SuperResolutionInference():
         optimizer, scheduler, scaler = self.train_setting(net)
         loss_func_dic = self.get_loss_func_dic(device=device)
         # initialize tensorboard writer
-        tensorboard_writer = SummaryWriter(self.args.tfevent_path)
+        current_time = datetime.now().strftime("%b%d_%H-%M-%S")
+        tensorboard_writer = SummaryWriter(os.path.join(self.args.tfevent_path,'run_' + current_time))
         draw_func = visualize_image_tf
         val_interval = self.config_dict.get('val_interval', 5)  # do validation every val_interval epochs
         best_val_epoch_metric = -1e9
+        best_epoch_dict = {}
         best_val_epoch = -1  # the epoch that gives best validation metrics
         max_epochs = self.config_dict.get('finetune_epochs', 300)
         epoch_len = len(self.train_ds) // self.train_loader.batch_size
@@ -398,6 +402,7 @@ class SuperResolutionInference():
                         epoch_val_sum += v
                 if epoch_val_sum > best_val_epoch_metric:
                     best_val_epoch_metric = epoch_val_sum
+                    best_epoch_dict = epoch_metric_val
                     best_val_epoch = epoch + 1
                     torch.jit.save(net, self.env_dict["model_path"])
                     print("saved new best metric model")
@@ -407,8 +412,13 @@ class SuperResolutionInference():
                         epoch + 1, epoch_val_sum, best_val_epoch_metric, best_val_epoch
                     )
                 )
+                print(best_epoch_dict)
 
         print(f"train completed, best_metric: {best_val_epoch_metric:.4f} " f"at epoch: {best_val_epoch}")
+        print(best_epoch_dict)
+        hparam_dict = self.config_dict
+        hparam_dict.update(self.env_dict)
+        tensorboard_writer.add_hparams(hparam_dict,best_epoch_dict)
         tensorboard_writer.close()
     
     #4. Test
