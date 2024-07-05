@@ -30,8 +30,8 @@ Or modify and run:
 sbatch run_train.sh
 ```
 
-This python script uses batch size and patch size defined in [config_infer_vitconv_eyeq_80g.yaml](./config/config_infer_vitconv_eyeq_80g.yaml).
-The environment config include train/test model_path, data_base_dir, data_list_file_path, tfevent_path, and result_list_file_path defined in [environment_eyeq.yaml](./config/environment_eyeq.yaml).
+This python script uses batch size ,patch size, model arch, training setting, and train/test model_path defined in [config_infer_vitconv_eyeq_80g.yaml](./config/config_infer_vitconv_eyeq_80g.yaml).
+The environment config include data_base_dir, data_list_file_path, tfevent_path, and result_list_file_path defined in [environment_eyeq.yaml](./config/environment_eyeq.yaml).
 The pre-trained model special setting in [./pretrain_config/config_monai.yaml](./pretrain_config/config_monai.yaml)
 
 95% of the training data is used for training, while the rest 5% is used for validation and model selection.

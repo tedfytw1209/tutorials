@@ -30,3 +30,4 @@ finetune_epochs : 50
 val_interval : 5
 batch_size : 16
 amp : False
+model_path: /blue/bianjiang/tienyuchang/super_resol_model/model_eyeq.pt
