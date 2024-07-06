@@ -418,6 +418,7 @@ class SuperResolutionInference():
         print(best_epoch_dict)
         hparam_dict = self.config_dict
         hparam_dict.update(self.env_dict)
+        hparam_dict.pop('trans_dic')
         tensorboard_writer.add_hparams(hparam_dict,best_epoch_dict)
         tensorboard_writer.close()
     
