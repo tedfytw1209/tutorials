@@ -324,7 +324,7 @@ class OBJDetectInference():
         elif self.args.spatial_dims==2:
             draw_func = visualize_one_xy_slice_in_2d_image
         val_interval = self.config_dict.get('val_interval', 5)  # do validation every val_interval epochs
-        best_val_epoch_metric = 0.0
+        best_val_epoch_metric = -1e9
         best_epoch_dict = {}
         best_val_epoch = -1  # the epoch that gives best validation metrics
         max_epochs = self.config_dict.get('finetune_epochs', 300)
@@ -488,7 +488,6 @@ class OBJDetectInference():
                         epoch + 1, val_epoch_metric, best_val_epoch_metric, best_val_epoch
                     )
                 )
-                print(best_epoch_dict)
 
         print(f"train completed, best_metric: {best_val_epoch_metric:.4f} " f"at epoch: {best_val_epoch}")
         print(best_epoch_dict)
