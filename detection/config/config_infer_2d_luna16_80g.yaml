@@ -47,3 +47,4 @@ finetune_epochs: 300
 val_interval: 5
 batch_size: 8
 amp: True
+model_path: "/blue/bianjiang/tienyuchang/trained_models/model_resnet2d_fold0.pt"
