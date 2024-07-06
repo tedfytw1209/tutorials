@@ -599,12 +599,17 @@ class OBJDetectInference():
         return net
     #retina net
     def build_retinanet(self,anchor_generator: AnchorGenerator):
-        #tmp code
+        #conv_t_stride need change if spatial dim=2
+        if hasattr(self.args,"model_spatial_dims"):
+            model_spatial_dims = self.args.model_spatial_dims
+        else:
+            model_spatial_dims = self.args.spatial_dims
         conv1_t_size = [max(7, 2 * s + 1) for s in self.args.conv1_t_stride]
         backbone = resnet.ResNet(
             block=resnet.ResNetBottleneck,
             layers=[3, 4, 6, 3],
             block_inplanes=resnet.get_inplanes(),
+            spatial_dims=model_spatial_dims,
             n_input_channels=self.args.n_input_channels,
             conv1_t_stride=self.args.conv1_t_stride,
             conv1_t_size=conv1_t_size,

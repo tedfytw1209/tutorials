@@ -1,0 +1,49 @@
+---
+# architecture
+model: retinanet
+n_input_channels: 1
+conv1_t_stride:
+- 2
+- 2
+
+#dataset & detector
+gt_box_mode: cccwhd
+spacing:
+- 0.703125
+- 0.703125
+patch_size:
+- 192
+- 192
+- 1
+val_patch_size:
+- 512
+- 512
+- 1
+fg_labels:
+- 0
+spatial_dims: 2
+score_thresh: 0.02
+nms_thresh: 0.22
+returned_layers:
+- 1
+- 2
+base_anchor_shapes:
+- - 6
+  - 8
+- - 8
+  - 6
+- - 10
+  - 10
+balanced_sampler_pos_fraction: 0.3
+
+#training setting
+lr: 0.01
+scheduler_step : 150
+scheduler_gamma : 0.1
+warmup_epochs : 10
+warmup_multi : 1
+w_cls: 1
+finetune_epochs: 300
+val_interval: 5
+batch_size: 8
+amp: True
