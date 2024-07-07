@@ -210,9 +210,9 @@ class LayerNorm(nn.Module):
         self.reset_parameters() #self initialize
 
     def forward(self, x):
-        u = x.detach().mean(1, keepdim=True)
-        s = (x.detach() - u).pow(2).mean(1, keepdim=True)
-        x = (x - u) / (torch.sqrt(s + self.eps) + self.eps)
+        u = x.mean(1, keepdim=True)
+        s = (x - u).pow(2).mean(1, keepdim=True)
+        x = (x - u) / torch.sqrt(s + self.eps)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
         return x
 
