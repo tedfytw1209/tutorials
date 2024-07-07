@@ -207,7 +207,7 @@ class LayerNorm(nn.Module):
         self.weight = nn.Parameter(torch.ones(normalized_shape))
         self.bias = nn.Parameter(torch.zeros(normalized_shape))
         self.eps = eps
-        self.spatial_dims = spatial_dims
+        self.spatial_dims = spatial_dims #!!no use now
         self.normalized_shape = tuple([normalized_shape]+[1 for i in range(self.spatial_dims)])
         self.reset_parameters() #self initialize
 
@@ -220,10 +220,15 @@ class LayerNorm(nn.Module):
         Returns:
             normaled x: tensor with channel first (B,C,H,W) or (B,C,H,W,D)
         """
-        u = x.mean(1, keepdim=True)
-        s = (x - u).pow(2).mean(1, keepdim=True)
-        x = (x - u) / torch.sqrt(s + self.eps)
-        x = self.weight.reshape(self.normalized_shape) * x + self.bias.reshape(self.normalized_shape)
+        if self.spatial_dims==2:
+            x = x.permute(0,2,3,1) #(B,C,H,W)->(B,H,W,C)
+        elif self.spatial_dims==3:
+            x = x.permute(0,2,3,4,1)
+        x = F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
+        if self.spatial_dims==2:
+            x = x.permute(0,3,1,2) #(B,H,W,C)->(B,C,H,W)
+        elif self.spatial_dims==3:
+            x = x.permute(0,4,1,2,3)
         return x
 
     def reset_parameters(self) -> None:
