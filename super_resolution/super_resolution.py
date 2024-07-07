@@ -341,7 +341,7 @@ class SuperResolutionInference():
                 tensorboard_writer.add_scalar(f"avg_{k}_loss", v, epoch + 1)
 
             # save last trained model
-            torch.jit.save(net, self.env_dict["model_path"][:-3] + "_last.pt")
+            torch.jit.save(net, self.args.model_path[:-3] + "_last.pt")
             print("saved last model")
 
             # ------------- Validation for model selection -------------
@@ -404,7 +404,7 @@ class SuperResolutionInference():
                     best_val_epoch_metric = epoch_val_sum
                     best_epoch_dict = epoch_metric_val
                     best_val_epoch = epoch + 1
-                    torch.jit.save(net, self.env_dict["model_path"])
+                    torch.jit.save(net, self.args.model_path)
                     print("saved new best metric model")
                 print(
                     "current epoch: {} current metric: {:.4f} "
@@ -436,8 +436,8 @@ class SuperResolutionInference():
         """
         # 2) build test network
         if net==None:
-            net = torch.jit.load(self.env_dict["model_path"]).to(device)
-            print(f"Load model from {self.env_dict['model_path']}")
+            net = torch.jit.load(self.args.model_path).to(device)
+            print(f"Load model from {self.args.model_path}")
         else:
             print(f"Use model from function args")
 
