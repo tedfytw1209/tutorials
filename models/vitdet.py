@@ -223,7 +223,7 @@ class LayerNorm(nn.Module):
         u = x.mean(1, keepdim=True)
         s = (x - u).pow(2).mean(1, keepdim=True)
         x = (x - u) / torch.sqrt(s + self.eps)
-        x = self.weight.reshape(self.normalized_shape) * x + self.reshape(self.normalized_shape)
+        x = self.weight.reshape(self.normalized_shape) * x + self.bias.reshape(self.normalized_shape)
         return x
 
     def reset_parameters(self) -> None:
