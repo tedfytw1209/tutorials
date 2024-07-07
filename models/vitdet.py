@@ -193,6 +193,7 @@ class LayerScale(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         return x.mul_(self.gamma) if self.inplace else x * self.gamma
 
+#try different layernorm implement method !!
 class LayerNorm(nn.Module):
     """
     A LayerNorm variant, popularized by Transformers, that performs point-wise mean and
@@ -201,20 +202,34 @@ class LayerNorm(nn.Module):
     https://github.com/facebookresearch/ConvNeXt/blob/d1fa8f6fef0a165b27399986cc2bdacc92777e40/models/convnext.py#L119  # noqa B950
     """
 
-    def __init__(self, normalized_shape: int, eps: float=1e-6):
+    def __init__(self, normalized_shape: int, eps: float=1e-6, spatial_dims: int = 2,):
         super().__init__()
         self.weight = nn.Parameter(torch.empty(normalized_shape))
         self.bias = nn.Parameter(torch.empty(normalized_shape))
         self.eps = eps
-        self.normalized_shape = (normalized_shape,)
+        self.spatial_dims = spatial_dims
+        self.normalized_shape = tuple([normalized_shape]+[1 for i in range(self.spatial_dims)])
         self.reset_parameters() #self initialize
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
+        """_summary_
+
+        Args:
+            x (Tensor): Input tensor x with channel first (B,C,H,W) or (B,C,H,W,D)
+
+        Returns:
+            normaled x: tensor with channel first (B,C,H,W) or (B,C,H,W,D)
+        """
+        '''
         u = x.mean(1, keepdim=True)
         s = (x - u).pow(2).mean(1, keepdim=True)
         x = (x - u) / torch.sqrt(s + self.eps)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
-        return x
+        '''
+        if self.spatial_dims==2:
+            return F.layer_norm(x, self.normalized_shape, self.weight[:, None, None], self.bias[:, None, None], self.eps)
+        elif self.spatial_dims==3:
+            return F.layer_norm(x, self.normalized_shape, self.weight[:, None, None, None], self.bias[:, None, None, None], self.eps)
 
     def reset_parameters(self) -> None:
         init.ones_(self.weight)
@@ -625,6 +640,7 @@ class SimpleFeaturePyramid(nn.Module):
 
         self.scale_factors = scale_factors
         self.spatial_dims = spatial_dims
+        self.add_ones_dim = [1 for i in range(spatial_dims)]
         #input_shapes[in_feature].stride = patch_size, [4,8,16,32]
         strides = [int(input_shapes[in_feature].stride / scale) for scale in scale_factors]
         #_assert_strides_are_log2_contiguous(strides)
@@ -637,13 +653,13 @@ class SimpleFeaturePyramid(nn.Module):
             if scale == 16.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5), #! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
-                    LayerNorm(dim // 4,eps=1e-5), #! detectron2 use 1e-6
+                    LayerNorm(dim // 4,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
-                    LayerNorm(dim // 8,eps=1e-5), #! detectron2 use 1e-6
+                    LayerNorm(dim // 8,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 8, dim // 16, kernel_size=2, stride=2),
                 ]
@@ -651,10 +667,10 @@ class SimpleFeaturePyramid(nn.Module):
             elif scale == 8.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
-                    LayerNorm(dim // 4,eps=1e-5), #!!! detectron2 use 1e-6
+                    LayerNorm(dim // 4,eps=1e-5,spatial_dims=self.spatial_dims), #!!! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
                 ]
@@ -662,7 +678,7 @@ class SimpleFeaturePyramid(nn.Module):
             elif scale == 4.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5), #! detectron2 use 1e-6
+                    LayerNorm(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
                     nn.GELU(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
                 ]
@@ -685,7 +701,7 @@ class SimpleFeaturePyramid(nn.Module):
                         kernel_size=1,
                         bias=use_bias,
                     ),
-                    LayerNorm(out_channels,eps=1e-5), #! detectron2 use 1e-6
+                    LayerNorm(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
                     nn.Conv2d(
                         out_channels,
                         out_channels,
@@ -743,7 +759,7 @@ class SimpleFeaturePyramid(nn.Module):
         #bottom_up_features = self.net(x)
         bottom_up_features = x
         features = bottom_up_features[self.in_feature]
-        features = features.permute(0,3,1,2)
+        features = features.permute(0,3,1,2) #to (B, C, H/patch, W/patch)
         results: list[Tensor] = []
 
         for stage in self.stages:

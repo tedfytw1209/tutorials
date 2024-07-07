@@ -90,7 +90,7 @@ class Conv_decoder(nn.Module):
             hidden_num_out = int(max(hidden_num//2, 16))
             layers = [
                     nn.ConvTranspose2d(hidden_num, hidden_num_out, kernel_size=2, stride=2, bias=conv_bias),
-                    norm_func(hidden_num_out,eps=1e-5),
+                    norm_func(hidden_num_out,eps=1e-5,spatial_dims=2),
                     act_func(),
                     ]
             layers = nn.Sequential(*layers)
@@ -147,7 +147,7 @@ class Upsample_decoder(nn.Module):
             layers = [
                     #x: Tensor in shape (batch, channel, spatial_1[, spatial_2, …).
                     SubpixelUpsample(2,hidden_num, hidden_num_out, scale_factor=2, bias=conv_bias),
-                    norm_func(hidden_num_out,eps=1e-5),
+                    norm_func(hidden_num_out,eps=1e-5,spatial_dims=2),
                     act_func(),
                     ]
             layers = nn.Sequential(*layers)
