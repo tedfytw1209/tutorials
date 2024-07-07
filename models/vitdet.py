@@ -208,7 +208,7 @@ class LayerNorm(nn.Module):
         self.bias = nn.Parameter(torch.zeros(normalized_shape))
         self.eps = eps
         self.spatial_dims = spatial_dims #!!no use now
-        self.normalized_shape = tuple([normalized_shape]+[1 for i in range(self.spatial_dims)])
+        self.normalized_shape = (normalized_shape, )
         self.reset_parameters() #self initialize
 
     def forward(self, x: Tensor) -> Tensor:
