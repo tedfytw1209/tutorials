@@ -226,10 +226,7 @@ class LayerNorm(nn.Module):
         x = (x - u) / torch.sqrt(s + self.eps)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
         '''
-        if self.spatial_dims==2:
-            return F.layer_norm(x, self.normalized_shape, self.weight[:, None, None], self.bias[:, None, None], self.eps)
-        elif self.spatial_dims==3:
-            return F.layer_norm(x, self.normalized_shape, self.weight[:, None, None, None], self.bias[:, None, None, None], self.eps)
+        return F.layer_norm(x, self.normalized_shape, self.weight.reshape(self.normalized_shape), self.bias.reshape(self.normalized_shape), self.eps)
 
     def reset_parameters(self) -> None:
         init.ones_(self.weight)
