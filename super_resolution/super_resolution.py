@@ -465,10 +465,10 @@ class SuperResolutionInference():
                     epoch_metric_val[k] += metric_val.detach().item()
                 step += 1
                 print(f"{step}/{epoch_len}")
+                del test_inputs
+                del test_targets
 
         # compute metrics
-        del test_inputs
-        del test_targets
         torch.cuda.empty_cache()
         end_time = time.time()
         print("Testing time: ", end_time - start_time)
