@@ -944,3 +944,60 @@ def vitdet_fpn_feature_extractor(
         returned_layers=list(returned_layers)
     )
     return feature_extractor
+
+#detector for debug
+from monai.apps.detection.networks.retinanet_detector import RetinaNetDetector
+
+class RetinaNetDetector_debug(RetinaNetDetector):
+    def get_box_train_sample_per_image(
+        self,
+        box_regression_per_image: Tensor,
+        targets_per_image: dict[str, Tensor],
+        anchors_per_image: Tensor,
+        matched_idxs_per_image: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        """
+        Get samples from one image for box regression losses computation.
+
+        Args:
+            box_regression_per_image: box regression result for one image, (sum(HWA), 2*self.spatial_dims)
+            targets_per_image: a dict with at least two keys: self.target_box_key and self.target_label_key,
+                ground-truth boxes present in the image.
+            anchors_per_image: anchors of one image,
+                sized (sum(HWA), 2*spatial_dims) or (sum(HWDA), 2*spatial_dims).
+                A = self.num_anchors_per_loc.
+            matched_idxs_per_image: matched index, sized (sum(HWA),) or  (sum(HWDA),)
+
+        Return:
+            paired predicted and GT samples from one image for box regression losses computation
+        """
+        foreground_idxs_per_image = torch.where(matched_idxs_per_image >= 0)[0]
+        num_gt_box = targets_per_image[self.target_box_key].shape[0]
+
+        # if no GT box, return empty arrays
+        if num_gt_box == 0:
+            return box_regression_per_image[0:0, :], box_regression_per_image[0:0, :]
+
+        # select only the foreground boxes
+        # matched GT boxes for foreground anchors
+        matched_gt_boxes_per_image = targets_per_image[self.target_box_key][
+            matched_idxs_per_image[foreground_idxs_per_image]
+        ].to(box_regression_per_image.device)
+        # predicted box regression for foreground anchors
+        box_regression_per_image = box_regression_per_image[foreground_idxs_per_image, :]
+        # foreground anchors
+        anchors_per_image = anchors_per_image[foreground_idxs_per_image, :]
+
+        # encode GT boxes or decode predicted box regression before computing losses
+        matched_gt_boxes_per_image_ = matched_gt_boxes_per_image
+        box_regression_per_image_ = box_regression_per_image
+        if self.encode_gt:
+            matched_gt_boxes_per_image_ = self.box_coder.encode_single(matched_gt_boxes_per_image_, anchors_per_image)
+        if self.decode_pred:
+            box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
+        print('self.box_coder.weights: ', self.box_coder.weights)
+        print('anchors_per_image: ', anchors_per_image)
+        print('gt boxes before enocde: ',matched_gt_boxes_per_image)
+        print('gt boxes after enocde: ',matched_gt_boxes_per_image_)
+        print('box_regression: ',box_regression_per_image_)
+        return box_regression_per_image_, matched_gt_boxes_per_image_

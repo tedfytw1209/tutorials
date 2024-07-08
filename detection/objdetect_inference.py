@@ -48,7 +48,7 @@ from monai.networks.nets import resnet
 from monai.transforms import ScaleIntensityRanged
 from monai.utils import set_determinism
 
-from models.vitdet import SimpleFeaturePyramid, ViTDet, RMSNorm
+from models.vitdet import SimpleFeaturePyramid, ViTDet, RMSNorm, RetinaNetDetector_debug
 from models.vitdet import vitdet_fpn_feature_extractor
 from models.schedular.warmup_scheduler import GradualWarmupScheduler
 from utils.utils import load_model
@@ -718,7 +718,7 @@ class OBJDetectInference():
         '''
         Build detector for rentinanet
         '''
-        detector = RetinaNetDetector(network=net, anchor_generator=anchor_generator, debug=self.verbose, spatial_dims=self.args.spatial_dims).to(device)
+        detector = RetinaNetDetector_debug(network=net, anchor_generator=anchor_generator, debug=self.verbose, spatial_dims=self.args.spatial_dims).to(device)
         #!!! need ask consider image mean and std or not?
         # set training components
         if train:
