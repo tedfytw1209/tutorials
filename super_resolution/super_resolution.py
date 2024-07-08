@@ -449,6 +449,7 @@ class SuperResolutionInference():
         with torch.no_grad():
             start_time = time.time()
             net.eval()
+            epoch_len = len(self.inference_ds) // self.inference_loader.batch_size
             for test_data in self.inference_loader:
                 test_inputs = test_data["low_res_image"].to(device)
                 test_targets = test_data["image"].to(device)
@@ -463,9 +464,11 @@ class SuperResolutionInference():
                     metric_val = metric(test_outputs, test_targets)
                     epoch_metric_val[k] += metric_val.detach().item()
                 step += 1
+                print(f"{step}/{epoch_len}")
 
         # compute metrics
         del test_inputs
+        del test_targets
         torch.cuda.empty_cache()
         end_time = time.time()
         print("Testing time: ", end_time - start_time)
