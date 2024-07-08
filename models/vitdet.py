@@ -995,9 +995,9 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             matched_gt_boxes_per_image_ = self.box_coder.encode_single(matched_gt_boxes_per_image_, anchors_per_image)
         if self.decode_pred:
             box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
-        print('self.box_coder.weights: ', self.box_coder.weights)
         print('anchors_per_image: ', anchors_per_image)
-        print('gt boxes before enocde: ',matched_gt_boxes_per_image)
-        print('gt boxes after enocde: ',matched_gt_boxes_per_image_)
+        print('gt boxes before encode: ',matched_gt_boxes_per_image)
+        print('gt boxes after encode: ',matched_gt_boxes_per_image_)
+        print('gt boxes redecode: ', self.box_coder.decode_single(matched_gt_boxes_per_image_, anchors_per_image))
         print('box_regression: ',box_regression_per_image_)
         return box_regression_per_image_, matched_gt_boxes_per_image_
