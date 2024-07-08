@@ -145,7 +145,7 @@ class SuperResolutionInference():
         val_loader = DataLoader(
             val_ds,
             batch_size=self.args.batch_size,
-            num_workers=2,
+            num_workers=4,
             pin_memory=torch.cuda.is_available(),
             persistent_workers=True,
         )
@@ -169,7 +169,7 @@ class SuperResolutionInference():
         )
         inference_loader = DataLoader(
             inference_ds,
-            batch_size=1,
+            batch_size=self.args.batch_size,
             num_workers=4,
             pin_memory=torch.cuda.is_available(),
         )
