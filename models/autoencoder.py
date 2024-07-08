@@ -10,7 +10,7 @@ from torch.nn import init
 import torch.nn.functional as F
 
 from monai.networks.blocks import SubpixelUpsample
-from vitdet import LayerNorm
+from .vitdet import LayerNorm
 
 class Lazy_Autoencoder(nn.Module):
     def __init__(self,
