@@ -34,6 +34,7 @@ base_anchor_shapes:
 - - 10
   - 10
 balanced_sampler_pos_fraction: 0.3
+num_candidates: 2
 
 #training setting
 lr: 0.01

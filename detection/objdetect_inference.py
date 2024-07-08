@@ -98,6 +98,9 @@ class OBJDetectInference():
             set_determinism(seed=0) #reset determinism for const training!
             torch.backends.cudnn.benchmark = True
             torch.set_num_threads(4)
+        #add default dict
+        config_dict['num_candidates'] = config_dict.get('num_candidates',4)
+        config_dict['center_in_gt'] = config_dict.get('center_in_gt',False)
 
         class_args = argparse.Namespace()
         for k, v in env_dict.items():
@@ -722,7 +725,7 @@ class OBJDetectInference():
         #!!! need ask consider image mean and std or not?
         # set training components
         if train:
-            detector.set_atss_matcher(num_candidates=4, center_in_gt=False)
+            detector.set_atss_matcher(num_candidates=self.args.num_candidates, center_in_gt=self.args.center_in_gt)
             detector.set_hard_negative_sampler(
                 batch_size_per_image=64,
                 positive_fraction=self.args.balanced_sampler_pos_fraction,
