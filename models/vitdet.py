@@ -709,7 +709,7 @@ class SimpleFeaturePyramid(nn.Module):
                         padding=1,
                         bias=use_bias,
                     ),
-                    #LayerNorm(out_channels,eps=1e-5), #! detectron2 use 1e-6 ##!!tmp remove it
+                    LayerNorm(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6 ##!!tmp remove it
                 ]
             )
             layers = nn.Sequential(*layers)

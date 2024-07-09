@@ -735,10 +735,10 @@ class OBJDetectInference():
         if train:
             detector.set_atss_matcher(num_candidates=self.args.num_candidates, center_in_gt=self.args.center_in_gt)
             detector.set_hard_negative_sampler(
-                batch_size_per_image=64,
+                batch_size_per_image=self.args.batch_size*8,
                 positive_fraction=self.args.balanced_sampler_pos_fraction,
                 pool_size=20,
-                min_neg=16,
+                min_neg=self.args.batch_size*2,
             )
             detector.set_target_keys(box_key="box", label_key="label")
         # set validation components
