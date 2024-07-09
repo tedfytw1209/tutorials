@@ -101,6 +101,8 @@ class OBJDetectInference():
         #add default dict
         config_dict['num_candidates'] = config_dict.get('num_candidates',4)
         config_dict['center_in_gt'] = config_dict.get('center_in_gt',False)
+        config_dict['optimizer'] = config_dict.get('optimizer','sgd')
+        config_dict['wd'] = config_dict.get('wd',3e-5)
 
         class_args = argparse.Namespace()
         for k, v in env_dict.items():
@@ -761,13 +763,20 @@ class OBJDetectInference():
             scheduler
             scaler
         '''
-        optimizer = torch.optim.SGD(
-            detector.network.parameters(),
-            self.args.lr,
-            momentum=0.9,
-            weight_decay=3e-5,
-            nesterov=True,
-        )
+        if self.args.optimizer=='sgd':
+            optimizer = torch.optim.SGD(
+                detector.network.parameters(),
+                self.args.lr,
+                momentum=0.9,
+                weight_decay=self.args.wd,
+                nesterov=True,
+            )
+        elif self.args.optimizer=='adamw':
+            optimizer = torch.optim.AdamW(
+                detector.network.parameters(),
+                self.args.lr,
+                weight_decay=self.args.wd,
+            )
         after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
         scheduler_warmup = GradualWarmupScheduler(optimizer, multiplier=self.args.warmup_multi, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)
         scaler = torch.cuda.amp.GradScaler() if self.amp else None
