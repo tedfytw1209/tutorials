@@ -499,7 +499,7 @@ class OBJDetectInference():
         hparam_dict = self.config_dict
         hparam_dict.update(self.env_dict)
         hparam_dict.pop('trans_dic')
-        print([n for n in hparam_dict.values()])
+        hparam_dict = {k:str(v) for k,v in hparam_dict.items()}
         tensorboard_writer.add_hparams(hparam_dict,best_epoch_dict)
         tensorboard_writer.close()
     
