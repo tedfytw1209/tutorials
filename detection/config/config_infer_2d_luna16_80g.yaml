@@ -21,7 +21,7 @@ val_patch_size:
 fg_labels:
 - 0
 spatial_dims: 2
-score_thresh: 0.02
+score_thresh: 0.08
 nms_thresh: 0.22
 returned_layers:
 - 1
@@ -33,7 +33,7 @@ base_anchor_shapes:
   - 6
 - - 10
   - 10
-balanced_sampler_pos_fraction: 0.3
+balanced_sampler_pos_fraction: 0.2
 num_candidates: 3
 
 #training setting
@@ -45,6 +45,6 @@ warmup_multi : 1
 w_cls: 1
 finetune_epochs: 50
 val_interval: 5
-batch_size: 8
+batch_size: 32
 amp: False
 model_path: "/blue/bianjiang/tienyuchang/trained_models/model_resnet2d_fold0.pt"
