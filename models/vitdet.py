@@ -27,6 +27,7 @@ from monai.networks.blocks.patchembedding import PatchEmbeddingBlock
 from monai.networks.blocks.mlp import MLPBlock
 from monai.utils import optional_import
 from monai.networks.layers.factories import Pool
+from monai.networks.blocks import SubpixelUpsample
 
 from dataclasses import dataclass
 from typing import Optional
@@ -416,26 +417,18 @@ class TransformerBlock(nn.Module):
         """
         short_cut = x
         x = self.norm1(x)
-        print('x: ',x.shape)
         if self.window_size > 0: # (B, HW, C) -> (B, H, W, C) -> (B*windows, window_szie, window_size, C) -> (B*windows, window_szie*window_size, C)
             x = x.view(-1, self.input_size[0], self.input_size[1], self.hidden_size)
-            print('before window x: ',x.shape)
             H, W = x.shape[1], x.shape[2]
             x, pad_hw = window_partition(x, self.window_size)
-            print('window x: ',x.shape)
             x = x.view(-1, self.window_size*self.window_size, self.hidden_size)
-            print('before attn x: ',x.shape)
             x = self.attn(x) # same shape
-            print('attn x: ',x.shape)
             #(B*windows, window_szie*window_size, C)->(B*windows, window_szie, window_size, C)->(B, H, W, C)->(B, HW, C)
             x = x.view(-1, self.window_size, self.window_size, self.hidden_size)
-            print('before window x: ',x.shape)
             x = window_unpartition(x, self.window_size, pad_hw, (H, W))
-            print('window x: ',x.shape)
             x = x.view(-1, self.input_size[0]* self.input_size[1], self.hidden_size)
         else:
             x = self.attn(x) # same shape
-        print('before mlp x: ',x.shape)
         x = short_cut + self.drop_path(self.ls1(x))
         x = x + self.drop_path(self.ls2(self.mlp(self.norm2(x))))
         return x
@@ -626,6 +619,9 @@ class SimpleFeaturePyramid(nn.Module):
         top_block: nn.Module | None = None,
         square_pad: int = 0,
         spatial_dims: int = 2,
+        conv_bias: bool = False,
+        use_layer_norm: bool = True,
+        act_func: nn.Module = nn.GELU,
     ):
         """
         Args:
@@ -645,7 +641,11 @@ class SimpleFeaturePyramid(nn.Module):
             spatial_dims (int): default is 2, not implement spatial_dims=3 case now.
         """
         super().__init__()
-
+        if use_layer_norm:
+            norm_func = LayerNorm
+        else:
+            norm_func = nn.Identity
+        
         self.scale_factors = scale_factors
         self.spatial_dims = spatial_dims
         self.add_ones_dim = [1 for i in range(spatial_dims)]
@@ -655,39 +655,14 @@ class SimpleFeaturePyramid(nn.Module):
 
         dim = input_shapes[in_feature].channels
         self.stages = nn.ModuleList() #for store sub modules
-        use_bias = False
+        use_bias = conv_bias
         for idx, scale in enumerate(scale_factors):
             out_dim = dim
-            if scale == 16.0:
+            if scale == 4.0:
                 layers = [
                     nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
-                    nn.GELU(),
-                    nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
-                    LayerNorm(dim // 4,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
-                    nn.GELU(),
-                    nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
-                    LayerNorm(dim // 8,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
-                    nn.GELU(),
-                    nn.ConvTranspose2d(dim // 8, dim // 16, kernel_size=2, stride=2),
-                ]
-                out_dim = dim // 16
-            elif scale == 8.0:
-                layers = [
-                    nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #!!! detectron2 use 1e-6
-                    nn.GELU(),
-                    nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
-                    LayerNorm(dim // 4,eps=1e-5,spatial_dims=self.spatial_dims), #!!! detectron2 use 1e-6
-                    nn.GELU(),
-                    nn.ConvTranspose2d(dim // 4, dim // 8, kernel_size=2, stride=2),
-                ]
-                out_dim = dim // 8
-            elif scale == 4.0:
-                layers = [
-                    nn.ConvTranspose2d(dim, dim // 2, kernel_size=2, stride=2),
-                    LayerNorm(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
-                    nn.GELU(),
+                    norm_func(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
+                    act_func(),
                     nn.ConvTranspose2d(dim // 2, dim // 4, kernel_size=2, stride=2),
                 ]
                 out_dim = dim // 4
@@ -709,7 +684,7 @@ class SimpleFeaturePyramid(nn.Module):
                         kernel_size=1,
                         bias=use_bias,
                     ),
-                    LayerNorm(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
+                    norm_func(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
                     nn.Conv2d(
                         out_channels,
                         out_channels,
@@ -717,7 +692,7 @@ class SimpleFeaturePyramid(nn.Module):
                         padding=1,
                         bias=use_bias,
                     ),
-                    LayerNorm(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6 ##!!tmp remove it
+                    norm_func(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6 ##!!tmp remove it
                 ]
             )
             layers = nn.Sequential(*layers)
@@ -783,7 +758,163 @@ class SimpleFeaturePyramid(nn.Module):
         assert len(self._out_features) == len(results)
         out_dict: dict[str, Tensor] = OrderedDict({f: res for f, res in zip(self._out_features, results)})
         return out_dict
-    
+
+class SimpleFeaturePyramid_Upsample(nn.Module):
+    """
+    Upsample version of SimpleFeaturePyramid
+    """
+    def __init__(
+        self,
+        input_shapes: Sequence[int],
+        in_feature: str,
+        out_channels: int,
+        scale_factors: Sequence[float],
+        top_block: nn.Module | None = None,
+        square_pad: int = 0,
+        spatial_dims: int = 2,
+        conv_bias: bool = False,
+        use_layer_norm: bool = True,
+        act_func: nn.Module = nn.LeakyReLU,
+    ):
+        """
+        Args:
+            input_shapes: input_shapes of the net (net.output_shape()).
+            in_feature (str): names of the input feature maps coming from the net.
+            out_channels (int): number of channels in the output feature maps.
+            scale_factors (list[float]): list of scaling factors to upsample or downsample
+                the input features for creating pyramid features.
+            top_block (nn.Module or None): if provided, an extra operation will
+                be performed on the output of the last (smallest resolution)
+                pyramid output, and the result will extend the result list. The top_block
+                further downsamples the feature map. It must have an attribute
+                "num_levels", meaning the number of extra pyramid levels added by
+                this block, and "in_feature", which is a string representing
+                its input feature (e.g., p5).
+            square_pad (int): If > 0, require input images to be padded to specific square size.
+            spatial_dims (int): default is 2, not implement spatial_dims=3 case now.
+            conv_bias: bool = True, use bias in Conv layer or not
+            use_layer_norm: bool = True, use layer norm or not
+            act_func: nn.Module = nn.LeakyReLU, activation functions
+        """
+        super().__init__()
+        if use_layer_norm:
+            norm_func = LayerNorm
+        else:
+            norm_func = nn.Identity
+
+        self.scale_factors = scale_factors
+        self.spatial_dims = spatial_dims
+        self.add_ones_dim = [1 for i in range(spatial_dims)]
+        #input_shapes[in_feature].stride = patch_size, [4,8,16,32]
+        strides = [int(input_shapes[in_feature].stride / scale) for scale in scale_factors]
+        #_assert_strides_are_log2_contiguous(strides)
+
+        dim = input_shapes[in_feature].channels
+        self.stages = nn.ModuleList() #for store sub modules
+        use_bias = conv_bias
+        for idx, scale in enumerate(scale_factors):
+            out_dim = dim
+            if scale == 4.0:
+                layers = [
+                    SubpixelUpsample(2,dim, dim // 2, scale_factor=2, bias=conv_bias),
+                    norm_func(dim // 2,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
+                    act_func(),
+                    SubpixelUpsample(2,dim // 2, dim // 4, scale_factor=2, bias=conv_bias),
+                ]
+                out_dim = dim // 4
+            elif scale == 2.0:
+                layers = [SubpixelUpsample(2,dim, dim // 2, scale_factor=2, bias=conv_bias),]
+                out_dim = dim // 2
+            elif scale == 1.0:
+                layers = []
+            elif scale == 0.5:
+                layers = [nn.MaxPool2d(kernel_size=2, stride=2)]
+            else:
+                raise NotImplementedError(f"scale_factor={scale} is not supported yet.")
+
+            layers.extend(
+                [
+                    nn.Conv2d(
+                        out_dim,
+                        out_channels,
+                        kernel_size=1,
+                        bias=use_bias,
+                    ),
+                    norm_func(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6
+                    nn.Conv2d(
+                        out_channels,
+                        out_channels,
+                        kernel_size=3,
+                        padding=1,
+                        bias=use_bias,
+                    ),
+                    norm_func(out_channels,eps=1e-5,spatial_dims=self.spatial_dims), #! detectron2 use 1e-6 ##!!tmp remove it
+                ]
+            )
+            layers = nn.Sequential(*layers)
+
+            stage = int(math.log2(strides[idx]))
+            self.add_module(f"simfp_{stage}", layers) #torch func
+            self.stages.append(layers)
+        
+        #self.net = net
+        self.in_feature = in_feature
+        self.top_block = top_block
+        # Return feature names are "p<stage>", like ["p2", "p3", ..., "p6"]
+        self._out_feature_strides = {"feat{}".format(int(math.log2(s))): s for s in strides}
+        # top block output feature maps, add another strides.
+        if self.top_block is not None:
+            for s in range(stage, stage + self.top_block.num_levels):
+                self._out_feature_strides["feat{}".format(s + 1)] = 2 ** (s + 1)
+
+        self._out_features = list(self._out_feature_strides.keys())
+        self._out_feature_channels = {k: out_channels for k in self._out_features}
+        self._size_divisibility = strides[-1]
+        self._square_pad = square_pad
+    @property
+    def padding_constraints(self):
+        return {
+            "size_divisiblity": self._size_divisibility,
+            "square_size": self._square_pad,
+        }
+    def forward(self, x: dict[str, Tensor]) -> dict[str, Tensor]:
+        """
+        Args:
+            x: Output of vitdet model dict[str, Tensor(B, H/patch, W/patch, C)]
+        Returns:
+            dict[str->Tensor]:
+                mapping from feature map name to pyramid feature map tensor
+                in high to low resolution order. Returned feature names follow the FPN
+                convention: "p<stage>", where stage has stride = 2 ** stage e.g.,
+                ["feat2", "feat3", ..., "feat6"]. patch default 16, 5 feature maps
+                {
+                    "feat2": Tensor(B,C, 4*H/patch, 4*W/patch)
+                    "feat3": Tensor(B,C, 2*H/patch, 2*W/patch)
+                    "feat4": Tensor(B,C, H/patch, W/patch)
+                    "feat5": Tensor(B,C, H/(2*patch), W/(2*patch))
+                    "feat6": Tensor(B,C, H/(4*patch), W/(4*patch))
+                }
+        """
+        #bottom_up_features = self.net(x)
+        bottom_up_features = x
+        features = bottom_up_features[self.in_feature]
+        features = features.permute(0,3,1,2) #to (B, C, H/patch, W/patch)
+        results: list[Tensor] = []
+
+        for stage in self.stages:
+            out_features = stage(features)
+            results.append(out_features)
+
+        if self.top_block is not None:
+            if self.top_block.in_feature in bottom_up_features:
+                top_block_in_feature = bottom_up_features[self.top_block.in_feature]
+            else:
+                top_block_in_feature = results[self._out_features.index(self.top_block.in_feature)]
+            results.append(self.top_block(top_block_in_feature))
+        assert len(self._out_features) == len(results)
+        out_dict: dict[str, Tensor] = OrderedDict({f: res for f, res in zip(self._out_features, results)})
+        return out_dict
+
 class LastLevelMaxPool(nn.Module):
     """
     This module is used in the original FPN to generate a downsampled
