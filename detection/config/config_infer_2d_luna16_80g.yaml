@@ -11,6 +11,7 @@ gt_box_mode: cccwhd
 spacing:
 - 0.703125
 - 0.703125
+- 1.25
 patch_size:
 - 192
 - 192
@@ -21,7 +22,7 @@ val_patch_size:
 fg_labels:
 - 0
 spatial_dims: 2
-score_thresh: 0.08
+score_thresh: 0.02
 nms_thresh: 0.22
 returned_layers:
 - 1
@@ -46,5 +47,5 @@ w_cls: 1
 finetune_epochs: 50
 val_interval: 5
 batch_size: 8
-amp: False
+amp: True
 model_path: "/blue/bianjiang/tienyuchang/trained_models/model_resnet2d_fold0.pt"

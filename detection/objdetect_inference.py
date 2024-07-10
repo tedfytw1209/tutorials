@@ -196,7 +196,7 @@ class OBJDetectInference():
             train_ds,
             batch_size=1,
             shuffle=True,
-            num_workers=7,
+            num_workers=4,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
             persistent_workers=True,
@@ -210,7 +210,7 @@ class OBJDetectInference():
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
-            num_workers=2,
+            num_workers=4,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
             persistent_workers=True,
