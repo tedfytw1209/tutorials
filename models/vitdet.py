@@ -1170,6 +1170,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             num_anchor_locs * self.num_anchors_per_loc for num_anchor_locs in num_anchor_locs_per_level
         ]
         print('num_anchors_per_level: ',num_anchors_per_level)
+        print('image_size: ',image_sizes)
         # split outputs per level
         split_head_outputs: dict[str, list[Tensor]] = {}
         for k in head_outputs_reshape:
@@ -1194,17 +1195,17 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             for b, a in zip(box_regression_per_image, anchors_per_image):
                 print('box regression shape: ',b.shape)
                 print('anchor shape: ',a.shape)
-                print('box sample 0: ', b[0])
+                print('box sample 100: ', b[100])
                 tmp = self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
-                print('box sample 0 decode: ', tmp[0])
+                print('box sample 100 decode: ', tmp[100])
                 tmp2 = self.box_coder.encode_single(tmp, a)
-                print('box sample 0 reencode: ', tmp2[0])
+                print('box sample 100 reencode: ', tmp2[100])
             # decode box regression into boxes
             boxes_per_image = [
                 self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
                 for b, a in zip(box_regression_per_image, anchors_per_image)
             ]  # List[Tensor], each sized (HWA, 2*spatial_dims)
-
+            print('img_spatial_size: ',img_spatial_size)
             selected_boxes, selected_scores, selected_labels = self.box_selector.select_boxes_per_image(
                 boxes_per_image, logits_per_image, img_spatial_size
             )
