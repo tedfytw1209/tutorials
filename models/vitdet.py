@@ -1136,6 +1136,7 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             box_regression_per_image_ = self.box_coder.decode_single(box_regression_per_image_, anchors_per_image)
         if matched_gt_boxes_per_image.shape[0]>0: 
             diff = matched_gt_boxes_per_image[:,self.spatial_dims:] - matched_gt_boxes_per_image[:,:self.spatial_dims]
+            print('diff: ',diff,end='\r')
             if diff.max() >= 10:
                 print('anchors_per_image: ', anchors_per_image)
                 print('gt boxes before encode: ',matched_gt_boxes_per_image)
