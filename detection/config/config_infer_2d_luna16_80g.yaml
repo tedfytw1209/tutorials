@@ -14,7 +14,7 @@ spacing:
 patch_size:
 - 192
 - 192
-- 1
+- 80
 val_patch_size:
 - 192
 - 192
