@@ -289,6 +289,8 @@ class SelectTo2D(MapTransform):
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
+        #
+        d['box_3d'] = torch.clone(d[self.box_keys])
         #box z, !! only select first box's mean
         box_arr = d[self.box_keys].cpu().detach().numpy()
         if box_arr.shape[0]>1: #multi boxs
@@ -318,7 +320,6 @@ class SelectTo2D(MapTransform):
         
         ### create new box value
         tmp_box = d[self.box_keys]
-        d['box_3d'] = torch.clone(tmp_box)
         tmp_box = torch.index_select(tmp_box, 1, torch.LongTensor([0, 1, 3, 4]))
         #tmp_box = tmp_box[:,:4]
         d[self.box_keys] = tmp_box
