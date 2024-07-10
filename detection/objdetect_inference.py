@@ -359,13 +359,11 @@ class OBJDetectInference():
                     dict(
                         label=batch_data_ii["label"].to(device),
                         box=batch_data_ii["box"].to(device),
-                        box_3d=batch_data_ii["box_3d"].to(device),
                     )
                     for batch_data_i in batch_data
                     for batch_data_ii in batch_data_i
                 ]
                 print('-'*20)
-                print('3d gt boxs:', [d['box_3d'] for d in targets])
                 print('gt boxs:', [d['box'] for d in targets])
 
                 for param in detector.network.parameters():
