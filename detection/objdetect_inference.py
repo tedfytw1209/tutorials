@@ -363,7 +363,9 @@ class OBJDetectInference():
                     for batch_data_i in batch_data
                     for batch_data_ii in batch_data_i
                 ]
-                print('gt boxs:',[d['box'] for d in targets])
+                print('-'*20)
+                print('3d gt boxs:', [d['3d_box'] for d in targets])
+                print('gt boxs:', [d['box'] for d in targets])
 
                 for param in detector.network.parameters():
                     param.grad = None
