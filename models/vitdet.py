@@ -1138,3 +1138,83 @@ class RetinaNetDetector_debug(RetinaNetDetector):
         #print('gt boxes before encode: ',matched_gt_boxes_per_image)
         #print('box_regression decode: ',self.box_coder.decode_single(box_regression_per_image_, anchors_per_image))
         return box_regression_per_image_, matched_gt_boxes_per_image_
+    
+    def postprocess_detections(
+        self,
+        head_outputs_reshape: dict[str, Tensor],
+        anchors: list[Tensor],
+        image_sizes: list[list[int]],
+        num_anchor_locs_per_level: Sequence[int],
+        need_sigmoid: bool = True,
+    ) -> list[dict[str, Tensor]]:
+        """
+        Postprocessing to generate detection result from classification logits and box regression.
+        Use self.box_selector to select the final output boxes for each image.
+
+        Args:
+            head_outputs_reshape: reshaped head_outputs. ``head_output_reshape[self.cls_key]`` is a Tensor
+              sized (B, sum(HW(D)A), self.num_classes). ``head_output_reshape[self.box_reg_key]`` is a Tensor
+              sized (B, sum(HW(D)A), 2*self.spatial_dims)
+            targets: a list of dict. Each dict with two keys: self.target_box_key and self.target_label_key,
+                ground-truth boxes present in the image.
+            anchors: a list of Tensor. Each Tensor represents anchors for each image,
+                sized (sum(HWA), 2*spatial_dims) or (sum(HWDA), 2*spatial_dims).
+                A = self.num_anchors_per_loc.
+
+        Return:
+            a list of dict, each dict corresponds to detection result on image.
+        """
+
+        # recover level sizes, HWA or HWDA for each level
+        num_anchors_per_level = [
+            num_anchor_locs * self.num_anchors_per_loc for num_anchor_locs in num_anchor_locs_per_level
+        ]
+        print('num_anchors_per_level: ',num_anchors_per_level)
+        # split outputs per level
+        split_head_outputs: dict[str, list[Tensor]] = {}
+        for k in head_outputs_reshape:
+            split_head_outputs[k] = list(head_outputs_reshape[k].split(num_anchors_per_level, dim=1))
+        split_anchors = [list(a.split(num_anchors_per_level)) for a in anchors]  # List[List[Tensor]]
+
+        class_logits = split_head_outputs[self.cls_key]  # List[Tensor], each sized (B, HWA, self.num_classes)
+        box_regression = split_head_outputs[self.box_reg_key]  # List[Tensor], each sized (B, HWA, 2*spatial_dims)
+        compute_dtype = class_logits[0].dtype
+
+        num_images = len(image_sizes)  # B
+
+        detections: list[dict[str, Tensor]] = []
+
+        for index in range(num_images):
+            box_regression_per_image = [
+                br[index] for br in box_regression
+            ]  # List[Tensor], each sized (HWA, 2*spatial_dims)
+            logits_per_image = [cl[index] for cl in class_logits]  # List[Tensor], each sized (HWA, self.num_classes)
+            anchors_per_image, img_spatial_size = split_anchors[index], image_sizes[index]
+            print('split_anchors len: ', len(anchors_per_image))
+            for b, a in zip(box_regression_per_image, anchors_per_image):
+                print('box regression shape: ',b.shape)
+                print('anchor shape: ',a.shape)
+                print('box sample 0: ', b[0])
+                tmp = self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
+                print('box sample 0 decode: ', tmp[0])
+                tmp2 = self.box_coder.encode_single(tmp, a)
+                print('box sample 0 reencode: ', tmp2[0])
+            # decode box regression into boxes
+            boxes_per_image = [
+                self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
+                for b, a in zip(box_regression_per_image, anchors_per_image)
+            ]  # List[Tensor], each sized (HWA, 2*spatial_dims)
+
+            selected_boxes, selected_scores, selected_labels = self.box_selector.select_boxes_per_image(
+                boxes_per_image, logits_per_image, img_spatial_size
+            )
+
+            detections.append(
+                {
+                    self.target_box_key: selected_boxes,  # Tensor, sized (N, 2*spatial_dims)
+                    self.pred_score_key: selected_scores,  # Tensor, sized (N, )
+                    self.target_label_key: selected_labels,  # Tensor, sized (N, )
+                }
+            )
+
+        return detections
