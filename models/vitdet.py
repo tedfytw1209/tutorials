@@ -416,18 +416,26 @@ class TransformerBlock(nn.Module):
         """
         short_cut = x
         x = self.norm1(x)
+        print('x: ',x.shape)
         if self.window_size > 0: # (B, HW, C) -> (B, H, W, C) -> (B*windows, window_szie, window_size, C) -> (B*windows, window_szie*window_size, C)
             x = x.view(-1, self.input_size[0], self.input_size[1], self.hidden_size)
+            print('before window x: ',x.shape)
             H, W = x.shape[1], x.shape[2]
             x, pad_hw = window_partition(x, self.window_size)
+            print('window x: ',x.shape)
             x = x.view(-1, self.window_size*self.window_size, self.hidden_size)
+            print('before attn x: ',x.shape)
             x = self.attn(x) # same shape
+            print('attn x: ',x.shape)
             #(B*windows, window_szie*window_size, C)->(B*windows, window_szie, window_size, C)->(B, H, W, C)->(B, HW, C)
             x = x.view(-1, self.window_size, self.window_size, self.hidden_size)
+            print('before window x: ',x.shape)
             x = window_unpartition(x, self.window_size, pad_hw, (H, W))
+            print('window x: ',x.shape)
             x = x.view(-1, self.input_size[0]* self.input_size[1], self.hidden_size)
         else:
             x = self.attn(x) # same shape
+        print('before mlp x: ',x.shape)
         x = short_cut + self.drop_path(self.ls1(x))
         x = x + self.drop_path(self.ls2(self.mlp(self.norm2(x))))
         return x
