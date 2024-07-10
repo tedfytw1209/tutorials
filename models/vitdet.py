@@ -1192,12 +1192,15 @@ class RetinaNetDetector_debug(RetinaNetDetector):
             logits_per_image = [cl[index] for cl in class_logits]  # List[Tensor], each sized (HWA, self.num_classes)
             anchors_per_image, img_spatial_size = split_anchors[index], image_sizes[index]
             print('split_anchors len: ', len(anchors_per_image))
-            for b, a in zip(box_regression_per_image, anchors_per_image):
+            for b, a, c in zip(box_regression_per_image, anchors_per_image, logits_per_image):
                 print('box regression shape: ',b.shape)
                 print('anchor shape: ',a.shape)
                 print('box sample 100: ', b[100])
                 tmp = self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
                 print('box sample 100 decode: ', tmp[100])
+                print('logit sample 100: ', c[100])
+                print('mean logit: ', c.mean())
+                print('max logit: ', c.max())
             # decode box regression into boxes
             boxes_per_image = [
                 self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
