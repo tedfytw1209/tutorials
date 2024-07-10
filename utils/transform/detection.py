@@ -318,7 +318,7 @@ class SelectTo2D(MapTransform):
         
         ### create new box value
         tmp_box = d[self.box_keys]
-        d['3d_box'] = torch.clone(tmp_box)
+        d['box_3d'] = torch.clone(tmp_box)
         tmp_box = torch.index_select(tmp_box, 1, torch.LongTensor([0, 1, 3, 4]))
         #tmp_box = tmp_box[:,:4]
         d[self.box_keys] = tmp_box
