@@ -1198,8 +1198,6 @@ class RetinaNetDetector_debug(RetinaNetDetector):
                 print('box sample 100: ', b[100])
                 tmp = self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
                 print('box sample 100 decode: ', tmp[100])
-                tmp2 = self.box_coder.encode_single(tmp, a)
-                print('box sample 100 reencode: ', tmp2[100])
             # decode box regression into boxes
             boxes_per_image = [
                 self.box_coder.decode_single(b.to(torch.float32), a).to(compute_dtype)
