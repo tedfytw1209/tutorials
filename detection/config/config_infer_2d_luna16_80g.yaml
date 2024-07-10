@@ -45,6 +45,6 @@ warmup_multi : 1
 w_cls: 1
 finetune_epochs: 50
 val_interval: 5
-batch_size: 32
+batch_size: 8
 amp: False
 model_path: "/blue/bianjiang/tienyuchang/trained_models/model_resnet2d_fold0.pt"
