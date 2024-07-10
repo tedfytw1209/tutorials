@@ -545,7 +545,7 @@ class OBJDetectInference():
                 #print for debug
                 print('-'*30)
                 print('pred_boxes: ', [test_data_i[detector.target_box_key] for test_data_i in test_outputs])
-                print('pred_scores: ', [test_data_i[detector.target_label_key] for test_data_i in test_outputs])
+                print('pred_scores: ', [test_data_i[detector.pred_score_key] for test_data_i in test_outputs])
                 print('gt_boxes: ', [test_data_i[detector.target_box_key] for test_data_i in test_data])
 
             # compute metrics
