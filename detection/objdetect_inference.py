@@ -199,7 +199,6 @@ class OBJDetectInference():
             num_workers=0,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
-            persistent_workers=True,
         )
 
         # create a validation data loader
@@ -213,7 +212,6 @@ class OBJDetectInference():
             num_workers=0,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
-            persistent_workers=True,
         )
         self.train_ds, self.val_ds = train_ds, val_ds
         self.train_loader, self.val_loader = train_loader, val_loader
