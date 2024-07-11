@@ -195,8 +195,8 @@ class OBJDetectInference():
         train_loader = DataLoader(
             train_ds,
             batch_size=1,
-            shuffle=True,
-            num_workers=4,
+            shuffle=False,
+            num_workers=0,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
             persistent_workers=True,
@@ -210,7 +210,7 @@ class OBJDetectInference():
         val_loader = DataLoader(
             val_ds,
             batch_size=1,
-            num_workers=4,
+            num_workers=0,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,
             persistent_workers=True,
@@ -363,8 +363,8 @@ class OBJDetectInference():
                     for batch_data_i in batch_data
                     for batch_data_ii in batch_data_i
                 ]
-                #print('-'*20)
-                #print('gt boxs:', [d['box'] for d in targets])
+                print('-'*20)
+                print('gt boxs:', [d['box'] for d in targets])
 
                 for param in detector.network.parameters():
                     param.grad = None
