@@ -317,9 +317,6 @@ class OBJDetectInference():
         detector = self.build_detector(net,anchor_generator,device,train=True,valid=True)
 
         # 2. Initialize training
-        set_determinism(seed=0) #reset determinism for const training!
-        torch.backends.cudnn.benchmark = True
-        torch.set_num_threads(4)
         # initlize optimizer, need different version for different setting
         optimizer, scheduler, scaler = self.train_setting(detector)
         # initialize tensorboard writer
