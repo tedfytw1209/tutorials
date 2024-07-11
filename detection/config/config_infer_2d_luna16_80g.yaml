@@ -38,6 +38,8 @@ balanced_sampler_pos_fraction: 0.2
 num_candidates: 3
 
 #training setting
+optimizer: sgd
+wd: 3.0e-5
 lr: 0.01
 scheduler_step : 150
 scheduler_gamma : 0.1

@@ -21,6 +21,8 @@ img_size : 2048
 scale_factor : 4
 
 #train setting
+optimizer: adam
+wd: 0
 lr: 1.0e-4
 scheduler_step : 10
 scheduler_gamma : 0.3

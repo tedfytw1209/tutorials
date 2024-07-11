@@ -73,10 +73,11 @@ class SuperResolutionInference():
         else:
             self.compute_dtype = torch.float32
         monai.config.print_config()
-        if debug_dict.get('set_deter',False):
-            set_determinism(seed=0) #reset determinism for const training!
-            torch.backends.cudnn.benchmark = True
-            torch.set_num_threads(4)
+        config_dict.update(debug_dict)
+        #add default dict
+        config_dict['set_deter'] = config_dict.get('set_deter',False)
+        config_dict['optimizer'] = config_dict.get('optimizer','adam')
+        config_dict['wd'] = config_dict.get('wd',3e-5)
 
         class_args = argparse.Namespace()
         for k, v in env_dict.items():
@@ -98,7 +99,11 @@ class SuperResolutionInference():
         else:
             self.attn_norm_layer = nn.LayerNorm
         self.attn_qk_normalization = config_dict.get('attn_qk_normalization',False)
-        
+        # 0. deter
+        if config_dict['set_deter']:
+            set_determinism(seed=0) #reset determinism for const training!
+            torch.backends.cudnn.benchmark = True
+            torch.set_num_threads(4)
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
         low_res_size = int(self.args.img_size // self.args.scale_factor)
@@ -245,6 +250,11 @@ class SuperResolutionInference():
             print_network_params(net.named_parameters(),show_grad=False)
 
         # 2. Initialize training
+        #set deter before train
+        if self.args.set_deter:
+            set_determinism(seed=0) #reset determinism for const training!
+            torch.backends.cudnn.benchmark = True
+            torch.set_num_threads(4)
         # initlize optimizer, need different version for different setting
         optimizer, scheduler, scaler = self.train_setting(net)
         loss_func_dic = self.get_loss_func_dic(device=device)
@@ -555,7 +565,25 @@ class SuperResolutionInference():
             scheduler
             scaler
         '''
-        optimizer = torch.optim.Adam(net.parameters(), lr=self.args.lr)
+        if self.args.optimizer=='sgd':
+            optimizer = torch.optim.SGD(
+                net.network.parameters(),
+                self.args.lr,
+                momentum=0.9,
+                weight_decay=self.args.wd,
+                nesterov=True,
+            )
+        elif self.args.optimizer=='adamw':
+            optimizer = torch.optim.AdamW(
+                net.network.parameters(),
+                self.args.lr,
+                weight_decay=self.args.wd,
+            )
+        elif self.args.optimizer=='adam':
+            optimizer = torch.optim.Adam(net.parameters(), 
+                lr=self.args.lr,
+                weight_decay=self.args.wd,
+            )
         
         after_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.scheduler_step, gamma=self.args.scheduler_gamma)
         scheduler = GradualWarmupScheduler(optimizer, multiplier=self.args.warmup_multi, total_epoch=self.args.warmup_epochs, after_scheduler=after_scheduler)

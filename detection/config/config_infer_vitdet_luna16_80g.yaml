@@ -62,6 +62,8 @@ base_anchor_shapes:
 balanced_sampler_pos_fraction: 0.3
 
 #training setting
+optimizer: sgd
+wd: 3.0e-5
 lr: 0.01
 scheduler_step : 25
 scheduler_gamma : 0.3

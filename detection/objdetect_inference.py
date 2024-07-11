@@ -94,11 +94,9 @@ class OBJDetectInference():
         else:
             self.compute_dtype = torch.float32
         monai.config.print_config()
-        if debug_dict.get('set_deter',False):
-            set_determinism(seed=0) #reset determinism for const training!
-            torch.backends.cudnn.benchmark = True
-            torch.set_num_threads(4)
+        config_dict.update(debug_dict)
         #add default dict
+        config_dict['set_deter'] = config_dict.get('set_deter',False)
         config_dict['num_candidates'] = config_dict.get('num_candidates',4)
         config_dict['center_in_gt'] = config_dict.get('center_in_gt',False)
         config_dict['optimizer'] = config_dict.get('optimizer','sgd')
@@ -124,6 +122,11 @@ class OBJDetectInference():
         else:
             self.attn_norm_layer = nn.LayerNorm
         self.attn_qk_normalization = config_dict.get('attn_qk_normalization',False)
+        # 0. deter
+        if config_dict['set_deter']:
+            set_determinism(seed=0) #reset determinism for const training!
+            torch.backends.cudnn.benchmark = True
+            torch.set_num_threads(4)
         # 1. define transform
         ### !maybe different transform in different dataset other than luna16
         intensity_transform = ScaleIntensityRanged(
@@ -319,6 +322,11 @@ class OBJDetectInference():
         detector = self.build_detector(net,anchor_generator,device,train=True,valid=True)
 
         # 2. Initialize training
+        #set deter before train
+        if self.args.set_deter:
+            set_determinism(seed=0) #reset determinism for const training!
+            torch.backends.cudnn.benchmark = True
+            torch.set_num_threads(4)
         # initlize optimizer, need different version for different setting
         optimizer, scheduler, scaler = self.train_setting(detector)
         # initialize tensorboard writer
