@@ -124,7 +124,7 @@ class PSNRMetric:
 
 class SSIMLoss:
     def __init__(self, spatial_dims: int = 2,data_range: float = 1.0,win_size: int=11):
-        self.loss = MonaiSSIMLoss(spatial_dims=spatial_dims,data_range=data_range)
+        self.loss = MonaiSSIMLoss(spatial_dims=spatial_dims,data_range=data_range,win_size=win_size)
 
     def __call__(self, y_pred, y):
         return self.loss(y_pred, y)

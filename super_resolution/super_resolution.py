@@ -476,8 +476,8 @@ class SuperResolutionInference():
                 for k,metric in metric_dic.items():
                     metric_val = metric(test_outputs, test_targets)
                     epoch_metric_val[k] += metric_val.detach().item()
-                step += 1
                 print(f"{step}/{epoch_len}")
+                step += 1
                 del test_inputs
                 del test_targets
 
