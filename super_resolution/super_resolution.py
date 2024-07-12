@@ -215,7 +215,7 @@ class SuperResolutionInference():
             'PSNR': PSNR(data_range=1.0, device=device),
             'SSIM': SSIM(device=device),
             'monaiPSNR': PSNRMetric(max_val=1.0),
-            'monaiSSIM': SSIMLoss(spatial_dims=2,data_range=1.0),
+            'monaiSSIM': SSIMLoss(spatial_dims=2,data_range=1.0,win_size=7),
             }
         train_results, test_results, compute_results = {},{},{}
         if self.use_train:

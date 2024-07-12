@@ -123,7 +123,7 @@ class PSNRMetric:
         self.metric.reset()
 
 class SSIMLoss:
-    def __init__(self, spatial_dims: int = 2,data_range: float = 1.0):
+    def __init__(self, spatial_dims: int = 2,data_range: float = 1.0,win_size: int=11):
         self.loss = MonaiSSIMLoss(spatial_dims=spatial_dims,data_range=data_range)
 
     def __call__(self, y_pred, y):
