@@ -32,10 +32,11 @@ gt_box_mode: cccwhd
 spacing:
 - 0.703125
 - 0.703125
+- 1.25
 patch_size:
 - 192
 - 192
-- 1
+- 80
 val_data_size:
 - -1
 - -1
@@ -59,7 +60,7 @@ base_anchor_shapes:
 - - 10
   - 10
 balanced_sampler_pos_fraction: 0.2
-num_candidates: 2
+num_candidates: 3
 
 #training setting
 optimizer: adamw
@@ -70,7 +71,8 @@ scheduler_gamma : 0.5
 warmup_epochs : 10
 warmup_multi : 1
 w_cls: 1
-finetune_epochs: 300
+finetune_epochs: 150
 val_interval: 5
 batch_size: 32
 amp: False
+model_path: "/blue/bianjiang/tienyuchang/trained_models/model_vitdet_paper_fold0.pt"
