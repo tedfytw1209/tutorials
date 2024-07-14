@@ -45,7 +45,7 @@ def Peak_Signal_Noise_Ratio(
     Return:
         PSNR value: Tensor
     '''
-    psnr = MonaiPSNRMetric(max_val=data_range)
+    psnr = PSNRMetric(max_val=data_range)
     return psnr(outputs, targets)
 
 def Structural_Similarity(
@@ -65,5 +65,5 @@ def Structural_Similarity(
     Return:
         SSIM value: Tensor
     '''
-    ssim = MonaiSSIMLoss(spatial_dims,data_range)
+    ssim = SSIMLoss(spatial_dims=spatial_dims,data_range=data_range,win_size=win_size)
     return ssim(outputs,targets)
