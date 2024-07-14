@@ -36,14 +36,12 @@ def Peak_Signal_Noise_Ratio(
     outputs: Tensor, 
     targets: Tensor,
     data_range: float,
-    device: str,
     ):
     '''
     Args:
         outputs: Tensor, output image with shape (B,C,H,W)
         targets: Tensor, target origin image with shape (B,C,H,W)
         data_range: float, data range of value 1.0 or 255
-        device: str, used device
     Return:
         PSNR value: Tensor
     '''
@@ -55,15 +53,15 @@ def Structural_Similarity(
     targets: Tensor,
     spatial_dims: int = 2,
     data_range: float = 1.0,
-    device: str|None = None,
+    win_size: int=11,
     ):
     '''
     Args:
         outputs: Tensor, output image with shape (B,C,H,W)
         targets: Tensor, target origin image with shape (B,C,H,W)
         spatial_dims: int, 2 or 3
-        data_range: float = 1.0, 1.0 or 255
-        device: str, used device
+        data_range: float = 1.0, data range of value 1.0 or 255
+        win_size: int, window size in ssim
     Return:
         SSIM value: Tensor
     '''
