@@ -43,7 +43,7 @@ from utils.transform.superresolution import generate_train_transforms, generate_
 from models.autoencoder import Lazy_Autoencoder, Conv_decoder, Upsample_decoder
 from utils.visualize import visualize_image_tf, print_network_params
 from utils.utils import load_model
-from utils.evaluation.superresolution_metric import PSNRMetric, SSIMLoss
+from utils.evaluation.superresolution_metric import PSNRMetric, SSIMMetric
 
 class SuperResolutionInference():
     """
@@ -213,7 +213,7 @@ class SuperResolutionInference():
         ## !! need handle different scale problem
         metric_dic = {
             'PSNR': PSNRMetric(max_val=1.0),
-            'SSIM': SSIMLoss(spatial_dims=2,data_range=1.0,win_size=7),
+            'SSIM': SSIMMetric(spatial_dims=2,data_range=1.0,win_size=7),
             }
         train_results, test_results, compute_results = {},{},{}
         if self.use_train:

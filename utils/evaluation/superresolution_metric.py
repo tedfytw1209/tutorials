@@ -1,13 +1,9 @@
 '''
-Detection Metrics Function implement through MONAI. COCOMetrics
+Reconstruct Metrics Function implement through MONAI. COCOMetrics
 '''
-import torch
 from torch import Tensor
-import numpy as np
-from collections.abc import Callable, Hashable, Mapping, Sequence
-from typing import Dict
 from monai.metrics import PSNRMetric as MonaiPSNRMetric
-from monai.losses import SSIMLoss as MonaiSSIMLoss
+from monai.metrics import SSIMMetric as MonaiSSIMMetric
 
 class PSNRMetric:
     def __init__(self, max_val=1.0):
@@ -18,19 +14,34 @@ class PSNRMetric:
         out = self.metric.aggregate()
         self.reset()
         return out
+    
+    def get(self, y_pred, y):
+        return self.metric(y_pred=y_pred, y=y)
 
     def aggregate(self):
         return self.metric.aggregate()
 
     def reset(self):
         self.metric.reset()
-
-class SSIMLoss:
+        
+class SSIMMetric:
     def __init__(self, spatial_dims: int = 2,data_range: float = 1.0,win_size: int=11):
-        self.loss = MonaiSSIMLoss(spatial_dims=spatial_dims,data_range=data_range,win_size=win_size)
+        self.metric = MonaiSSIMMetric(spatial_dims=spatial_dims,data_range=data_range,win_size=win_size)
 
     def __call__(self, y_pred, y):
-        return self.loss(y_pred, y)
+        self.metric(y_pred=y_pred, y=y)
+        out = self.metric.aggregate()
+        self.reset()
+        return out
+    
+    def get(self, y_pred, y):
+        return self.metric(y_pred=y_pred, y=y)
+
+    def aggregate(self):
+        return self.metric.aggregate()
+
+    def reset(self):
+        self.metric.reset()
 
 def Peak_Signal_Noise_Ratio(
     outputs: Tensor, 
@@ -65,5 +76,5 @@ def Structural_Similarity(
     Return:
         SSIM value: Tensor
     '''
-    ssim = SSIMLoss(spatial_dims=spatial_dims,data_range=data_range,win_size=win_size)
+    ssim = SSIMMetric(spatial_dims=spatial_dims,data_range=data_range,win_size=win_size)
     return ssim(outputs,targets)
