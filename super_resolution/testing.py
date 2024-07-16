@@ -49,6 +49,8 @@ if __name__ == "__main__":
     pretrain_dict = yaml.safe_load(open(args.pretrain_config, "r"))
     config_dict.update(pretrain_dict)
     pretrained_model = None
+    if args.model:
+        config_dict['model_path'] = args.model
     debug_dict = {} #full test
     debug_dict['use_train'] = False
     if args.deter:
