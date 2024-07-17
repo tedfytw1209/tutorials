@@ -101,6 +101,7 @@ class OBJDetectInference():
         config_dict['center_in_gt'] = config_dict.get('center_in_gt',False)
         config_dict['optimizer'] = config_dict.get('optimizer','sgd')
         config_dict['wd'] = config_dict.get('wd',3e-5)
+        #update env dict
 
         class_args = argparse.Namespace()
         for k, v in env_dict.items():
@@ -422,7 +423,7 @@ class OBJDetectInference():
             tensorboard_writer.add_scalar("train_lr", optimizer.param_groups[0]["lr"], epoch + 1)
 
             # save last trained model
-            torch.jit.save(detector.network, self.env_dict["model_path"][:-3] + "_last.pt")
+            torch.jit.save(detector.network, self.args.model_path[:-3] + "_last.pt")
             print("saved last model")
 
             # ------------- Validation for model selection -------------
@@ -495,7 +496,7 @@ class OBJDetectInference():
                     best_val_epoch_metric = val_epoch_metric
                     best_epoch_dict = val_epoch_metric_dict
                     best_val_epoch = epoch + 1
-                    torch.jit.save(detector.network, self.env_dict["model_path"])
+                    torch.jit.save(detector.network, self.args.model_path)
                     print("saved new best metric model")
                 print(
                     "current epoch: {} current metric: {:.4f} "
@@ -517,8 +518,8 @@ class OBJDetectInference():
     def test(self, anchor_generator, metric, device,net=None):
         # 2) build test network
         if net==None:
-            net = torch.jit.load(self.env_dict["model_path"]).to(device)
-            print(f"Load model from {self.env_dict['model_path']}")
+            net = torch.jit.load(self.args.model_path).to(device)
+            print(f"Load model from {self.args.model_path}")
         else:
             print(f"Use model from function args")
         print_network_params(net.named_parameters(),show_grad=False)
