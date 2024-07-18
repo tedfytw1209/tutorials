@@ -5,3 +5,4 @@ jupytext
 autoflake
 ipywidgets
 tensorboard>=2.4.0
+timm
