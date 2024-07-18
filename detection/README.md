@@ -6,15 +6,12 @@ pip install -r requirements.txt
 
 #### [3.1 Detection Training](./training.py)
 
-The LUNA16 dataset was split into 10-fold to run cross-fold training and inference.
+The LUNA16 dataset was split into two dataset training and testing (9:1).
 
-Taking fold 0 as an example, run:
+For training, run:
 ```bash
 python training.py \ 
-    -e ./config/environment_vit_luna16_fold0.yaml \ 
-    -c ./config/config_infer_vitdet2dimg_luna16_80g.json \ 
-    -p ./pretrain_config/config_monai.yaml \ 
-    -m /blue/bianjiang/tienyuchang/basemodel/checkpoint_test.pth \ 
+    -c ./config/config_infer_vitdet2dimg_luna16_80g.yaml \ 
     -d
 ```
 Or modify and run:
@@ -22,9 +19,8 @@ Or modify and run:
 sbatch run_train.sh
 ```
 
-This python script uses batch size and patch size defined in [./config/config_infer_vitdet2dimg_luna16_80g.yaml](./config/config_infer_vitdet2dimg_luna16_80g.yaml).
-The environment config include train/test model_path, data_base_dir, data_list_file_path, tfevent_path, and result_list_file_path defined in [./config/environment_vit_luna16_fold0.yaml](./config/environment_vit_luna16_fold0.yaml).
-The pre-trained model special setting in [./pretrain_config/config_monai.yaml](./pretrain_config/config_monai.yaml)
+This python script uses all srtting defined in [./config/config_infer_vitdet2dimg_luna16_80g.yaml](./config/config_infer_vitdet2dimg_luna16_80g.yaml).
+Include architecture, dataset & detector, file, training, and pretrain setting.
 
 If you are tuning hyper-parameters, please also add `--verbose` flag.
 Details about matched anchors during training will be printed out.
@@ -36,7 +32,6 @@ For each fold, 95% of the training data is used for training, while the rest 5% 
 For fold i, please run
 ```bash
 python testing.py \ 
-    -e ./config/environment_vit_luna16_fold0.yaml \ 
     -c ./config/config_infer_vitdet2dimg_luna16_80g.yaml \ 
     -d
 ```

@@ -62,6 +62,12 @@ base_anchor_shapes:
 balanced_sampler_pos_fraction: 0.2
 num_candidates: 3
 
+#file
+data_base_dir: "/orange/bianjiang/tienyu/LUNA16_Images_resample"
+data_list_file_path: "/orange/bianjiang/tienyu/LUNA16_datasplit/dataset_fold0.json"
+tfevent_path: "/blue/bianjiang/tienyuchang/tfevent_train/luna16"
+result_list_file_path: "/blue/bianjiang/tienyuchang/result/result_luna16_vitdet.json"
+
 #training setting
 optimizer: adamw
 lr: 1.6e-4
