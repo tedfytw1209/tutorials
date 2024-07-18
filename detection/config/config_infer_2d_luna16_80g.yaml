@@ -36,6 +36,11 @@ base_anchor_shapes:
   - 10
 balanced_sampler_pos_fraction: 0.2
 num_candidates: 3
+model_path: "/blue/bianjiang/tienyuchang/trained_models/model_resnet2d.pt"
+data_base_dir: "/orange/bianjiang/tienyu/LUNA16_Images_resample"
+data_list_file_path: "/orange/bianjiang/tienyu/LUNA16_datasplit/dataset_fold0.json"
+tfevent_path: "/blue/bianjiang/tienyuchang/tfevent_train/luna16"
+result_list_file_path: "/blue/bianjiang/tienyuchang/result/result_luna16.json"
 
 #training setting
 optimizer: sgd
@@ -50,4 +55,4 @@ finetune_epochs: 50
 val_interval: 5
 batch_size: 8
 amp: True
-model_path: "/blue/bianjiang/tienyuchang/trained_models/model_resnet2d_fold0.pt"
+

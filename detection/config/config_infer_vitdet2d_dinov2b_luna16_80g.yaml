@@ -62,6 +62,10 @@ base_anchor_shapes:
   - 10
 balanced_sampler_pos_fraction: 0.2
 num_candidates: 3
+data_base_dir: "/orange/bianjiang/tienyu/LUNA16_Images_resample"
+data_list_file_path: "/orange/bianjiang/tienyu/LUNA16_datasplit/dataset_fold0.json"
+tfevent_path: "/blue/bianjiang/tienyuchang/tfevent_train/luna16"
+result_list_file_path: "/blue/bianjiang/tienyuchang/result/result_luna16_vitdet_dino.json"
 
 #training setting
 optimizer: adamw
@@ -76,4 +80,14 @@ finetune_epochs: 50
 val_interval: 5
 batch_size: 16
 amp: False
-model_path: "/blue/bianjiang/tienyuchang/trained_models/model_vitdet_dino_fold0.pt"
+model_path: "/blue/bianjiang/tienyuchang/trained_models/model_vitdet_dino.pt"
+
+#pre-trained model
+checkpoint_path: "/orange/bianjiang/Image_dataset/checkpoints/ssl-framework/dinov2_vit_pretrained/dinov2_vitb14_reg4_pretrain.pth"
+state_key: ''
+trans_dic:
+  #patch_embed.proj.: feature_extractor.body.patch_embedding.patch_embeddings.
+  .fc: .linear
+  blocks.: feature_extractor.body.blocks.
+  norm.: feature_extractor.body.norm.
+init_values: 1.0
