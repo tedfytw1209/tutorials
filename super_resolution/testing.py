@@ -6,21 +6,9 @@ if __name__ == "__main__":
     #get the config, env, and pre_train network
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(
-        "-e",
-        "--environment-file",
-        default="./config/environment.yaml",
-        help="environment yaml file that stores environment path",
-    )
-    parser.add_argument(
         "-c",
         "--config-file",
         default="./config/config_train.yaml",
-        help="config yaml file that stores hyper-parameters",
-    )
-    parser.add_argument(
-        "-p",
-        "--pretrain-config",
-        default="./pretrain_config/config_monai.yaml",
         help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
@@ -31,12 +19,6 @@ if __name__ == "__main__":
         help="whether to print verbose detail during training, recommand True when you are not sure about hyper-parameters",
     )
     parser.add_argument(
-        "-m",
-        "--model",
-        default="",
-        help="pre-trained model path for inference",
-    )
-    parser.add_argument(
         "-d",
         "--deter",
         default=False,
@@ -44,10 +26,7 @@ if __name__ == "__main__":
         help="set determinism for model (seed=0)",
     )
     args = parser.parse_args()
-    env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
-    pretrain_dict = yaml.safe_load(open(args.pretrain_config, "r"))
-    config_dict.update(pretrain_dict)
     pretrained_model = None
     if args.model:
         config_dict['model_path'] = args.model
@@ -56,5 +35,5 @@ if __name__ == "__main__":
     if args.deter:
         debug_dict["set_deter"] = True
     #
-    inferer = SuperResolutionInference(env_dict=env_dict, config_dict=config_dict, debug_dict=debug_dict, verbose=args.verbose)
+    inferer = SuperResolutionInference(config_dict=config_dict, debug_dict=debug_dict, verbose=args.verbose)
     inferer.compute(pretrain_network=pretrained_model)

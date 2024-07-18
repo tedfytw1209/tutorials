@@ -51,7 +51,6 @@ class SuperResolutionInference():
     Take pre-trained model as input, print & write experimental result
 
     Args:
-        env_dict: envuroment config, include data, model, result path
         config_dict: training config, include training(finetuning) setting for specific dataset / model / gpu
         debug_dict: config for debug, only train or only test
         verbose: bool show details in training or not (for debug),
@@ -62,7 +61,6 @@ class SuperResolutionInference():
     """
     def __init__(
         self,
-        env_dict: dict,
         config_dict: dict,
         debug_dict: dict,
         verbose: bool = False,
@@ -80,13 +78,11 @@ class SuperResolutionInference():
         config_dict['wd'] = config_dict.get('wd',3e-5)
 
         class_args = argparse.Namespace()
-        for k, v in env_dict.items():
-            setattr(class_args, k, v)
         for k, v in config_dict.items():
             setattr(class_args, k, v)
         
         #store to self
-        self.env_dict, self.config_dict = env_dict, config_dict
+        self.config_dict = config_dict
         self.args = class_args
         self.verbose = verbose
         self.amp = amp
@@ -239,7 +235,7 @@ class SuperResolutionInference():
             metric_dic: dict for {metric_name: metric_func}
             device
             pre_net: pre-train model
-        Save model to self.env_dict["model_path"]
+        Save model to self.args.model_path
         """
         # 1-2. build network & load pre-train network
         net = self.build_net().to(device)
@@ -427,7 +423,6 @@ class SuperResolutionInference():
         print(f"train completed, best_metric: {best_val_epoch_metric:.4f} " f"at epoch: {best_val_epoch}")
         print(best_epoch_dict)
         hparam_dict = self.config_dict
-        hparam_dict.update(self.env_dict)
         hparam_dict.pop('trans_dic')
         hparam_dict = {k:str(v) for k,v in hparam_dict.items()}
         tensorboard_writer.add_hparams(hparam_dict,best_epoch_dict)
@@ -608,21 +603,9 @@ if __name__ == "__main__":
     #get the config, env, and pre_train network
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(
-        "-e",
-        "--environment-file",
-        default="./config/environment.yaml",
-        help="environment yaml file that stores environment path",
-    )
-    parser.add_argument(
         "-c",
         "--config-file",
         default="./config/config_train.yaml",
-        help="config yaml file that stores hyper-parameters",
-    )
-    parser.add_argument(
-        "-p",
-        "--pretrain-config",
-        default="./pretrain_config/config_monai.yaml",
         help="config yaml file that stores hyper-parameters",
     )
     parser.add_argument(
@@ -633,18 +616,6 @@ if __name__ == "__main__":
         help="whether to print verbose detail during training, recommand True when you are not sure about hyper-parameters",
     )
     parser.add_argument(
-        "-m",
-        "--model",
-        default="",
-        help="pre-trained model path for testing",
-    )
-    parser.add_argument(
-        "-t",
-        "--testmode",
-        default="full",
-        help="which part of func need to test",
-    )
-    parser.add_argument(
         "-d",
         "--deter",
         default=False,
@@ -652,23 +623,13 @@ if __name__ == "__main__":
         help="set determinism for model (seed=0)",
     )
     args = parser.parse_args()
-    env_dict = yaml.safe_load(open(args.environment_file, "r"))
     config_dict = yaml.safe_load(open(args.config_file, "r"))
-    pretrain_dict = yaml.safe_load(open(args.pretrain_config, "r"))
     trans_dic = {}
     state_key = 'state_dict'
-    trans_dic = pretrain_dict['trans_dic']
-    state_key = pretrain_dict['state_key']
-    pretrained_model = load_model(args.model,state_key,transform_dic=trans_dic)
-    config_dict.update(pretrain_dict)
-    test_mode = args.testmode
+    trans_dic = config_dict['trans_dic']
+    state_key = config_dict['state_key']
+    pretrained_model = load_model(config_dict.get('checkpoint_path',None),state_key,transform_dic=trans_dic)
     debug_dict = {} #full test
-    if args.testmode=='train': #train func test
-        debug_dict['use_test'] = False
-    elif args.testmode=='test': #test func test
-        debug_dict['use_train'] = False
-    if args.deter:
-        debug_dict["set_deter"] = True
     #
-    inferer = SuperResolutionInference(env_dict=env_dict, config_dict=config_dict, debug_dict=debug_dict, verbose=args.verbose)
+    inferer = SuperResolutionInference(config_dict=config_dict, debug_dict=debug_dict, verbose=args.verbose)
     inferer.compute(pretrain_network=pretrained_model)

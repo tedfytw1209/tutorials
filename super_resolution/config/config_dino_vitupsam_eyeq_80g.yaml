@@ -38,7 +38,11 @@ amp : False
 model_path: "/blue/bianjiang/tienyuchang/super_resol_model/model_eyeq_upsam.pt"
 
 #pre-trained model
-state_key: state_dict
+checkpoint_path: "/orange/bianjiang/Image_dataset/checkpoints/ssl-framework/dinov2_vit_pretrained/dinov2_vitb14_reg4_pretrain.pth"
+state_key: ''
 trans_dic:
-  .patch_embed.proj: .patch_embedding.patch_embeddings 
+  #patch_embed.proj.: feature_extractor.body.patch_embedding.patch_embeddings.
   .fc: .linear
+  blocks.: encoder.blocks.
+  norm.: encoder.norm.
+init_values: 1.0

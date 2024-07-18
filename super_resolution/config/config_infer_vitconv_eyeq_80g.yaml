@@ -19,6 +19,9 @@ dataset: "eyeq"
 data_channels : 3
 img_size : 2048
 scale_factor : 4
+data_base_dir: /orange/bianjiang/tienyu/EyePACS
+tfevent_path: /blue/bianjiang/tienyuchang/super_resol/eyeq
+result_list_file_path: /blue/bianjiang/tienyuchang/result/result_eyeq.json
 
 #train setting
 optimizer: adam
@@ -32,4 +35,10 @@ finetune_epochs : 50
 val_interval : 5
 batch_size : 16
 amp : False
-model_path: "/blue/bianjiang/tienyuchang/super_resol_model/model_eyeq.pt"
+model_path: "/blue/bianjiang/tienyuchang/super_resol_model/model_eyeq_conv.pt"
+
+#pre-trained model
+state_key: state_dict
+trans_dic:
+  .patch_embed.proj: .patch_embedding.patch_embeddings 
+  .fc: .linear
