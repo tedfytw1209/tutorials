@@ -48,5 +48,37 @@ def load_model(path=None,state_key='state_dict',transform_dic={}):
         model = None
     return model
 
-def make_weights():
-    pass
+def make_weights(data,max_weight=10):
+    data_len = len(data)
+    data_boxlens = []
+    for row in data:
+        boxes = row['box']
+        bb_lens = [n[-1] for n in boxes]
+        if len(bb_lens) > 0:
+            mean_len = sum(bb_lens) / len(bb_lens)
+            data_boxlens.append(mean_len)
+        else:
+            data_boxlens.append(0)
+    #give small boxes more weights
+    avg_len = sum(data_boxlens) / data_len
+    data_weight = []
+    for each_box in data_boxlens:
+        if each_box > 0:
+            weight = max(min(avg_len / each_box, max_weight),1)
+        else:
+            weight = 0
+        data_weight.append(weight)
+    #give negative avg weights
+    avg_weight = sum(data_weight) / data_len
+    out_weight = []
+    for each_weight in data_weight:
+        if each_weight > 0:
+            out_weight.append(each_weight)
+        else:
+            out_weight.append(avg_weight)
+    #print weight statistics
+    print('Weight statistics:')
+    print('Max weight:',max(out_weight))
+    print('Min weight:',min(out_weight))
+    print('Avg weight:',sum(out_weight) / data_len)
+    return out_weight

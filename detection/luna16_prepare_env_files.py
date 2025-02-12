@@ -13,6 +13,7 @@ import os
 import json
 import logging
 import sys
+import yaml
 
 
 def main():
@@ -47,7 +48,7 @@ def main():
         pass
 
     # generate env json file for image resampling
-    out_file = "config/environment_luna16_prepare.json"
+    out_file = "config/environment_luna16_prepare.yaml"
     env_dict = {}
     env_dict["orig_data_base_dir"] = raw_data_base_dir
     env_dict["data_base_dir"] = resampled_data_base_dir
@@ -58,11 +59,12 @@ def main():
     if dicom_meta_data_csv != None:
         env_dict["dicom_meta_data_csv"] = dicom_meta_data_csv
     with open(out_file, "w") as outfile:
-        json.dump(env_dict, outfile, indent=4)
+        yaml.dump(env_dict, outfile, default_flow_style=False)
+        #json.dump(env_dict, outfile, indent=4)
 
     # generate env json file for training and inference
     for fold in range(10):
-        out_file = "config/environment_luna16_fold" + str(fold) + ".json"
+        out_file = "config/environment_luna16_fold" + str(fold) + ".yaml"
         env_dict = {}
         env_dict["model_path"] = os.path.join(out_trained_models_dir, "model_luna16_fold" + str(fold) + ".pt")
         env_dict["data_base_dir"] = resampled_data_base_dir
@@ -72,7 +74,8 @@ def main():
             out_inference_result_dir, "result_luna16_fold" + str(fold) + ".json"
         )
         with open(out_file, "w") as outfile:
-            json.dump(env_dict, outfile, indent=4)
+            yaml.dump(env_dict, outfile, default_flow_style=False)
+            #json.dump(env_dict, outfile, indent=4)
 
 
 if __name__ == "__main__":

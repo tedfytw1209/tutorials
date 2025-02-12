@@ -52,7 +52,7 @@ from monai.utils import set_determinism
 from models.vitdet import SimpleFeaturePyramid, ViTDet, RMSNorm, RetinaNetDetector_debug
 from models.vitdet import vitdet_fpn_feature_extractor
 from models.schedular.warmup_scheduler import GradualWarmupScheduler
-from utils.utils import load_model
+from utils.utils import load_model, make_weights
 from utils.visualize import visualize_one_xy_slice_in_3d_image,visualize_one_xy_slice_in_2d_image,print_network_params
 from utils.evaluation.detection_metric import mAP_with_IoU,mAR_with_IoU,AP_at_IoU
 from utils.transform.detection import (
@@ -197,7 +197,7 @@ class OBJDetectInference():
         ## "label", "box" are keys in the dictionary
         #sampler if needed
         if hasattr(class_args,'sampler') and class_args.sampler=='weighted':
-            weights = [1.0] * len(train_ds)
+            weights = make_weights(train_data)
             sampler = WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
         else:
             sampler = None
