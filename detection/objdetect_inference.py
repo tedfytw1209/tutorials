@@ -29,7 +29,8 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn.utils.clip_grad import clip_grad_norm_
-
+import torch.optim as optim
+from torch.utils.data import WeightedRandomSampler
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -192,10 +193,19 @@ class OBJDetectInference():
             data=train_data[: int(0.95 * len(train_data))],
             transform=train_transforms,
         )
+        ## per image and images per batch (1, batch size, C, H, W, (D))
+        ## "label", "box" are keys in the dictionary
+        #sampler if needed
+        if hasattr(class_args,'sampler') and class_args.sampler=='weighted':
+            weights = [1.0] * len(train_ds)
+            sampler = WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
+        else:
+            sampler = None
         train_loader = DataLoader(
             train_ds,
             batch_size=1,
             shuffle=True,
+            sampler=sampler,
             num_workers=4,
             pin_memory=torch.cuda.is_available(),
             collate_fn=no_collation,

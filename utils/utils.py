@@ -47,3 +47,6 @@ def load_model(path=None,state_key='state_dict',transform_dic={}):
     else:
         model = None
     return model
+
+def make_weights():
+    pass
